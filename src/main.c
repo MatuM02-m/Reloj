@@ -41,6 +41,7 @@
 /* === Headers files inclusions =============================================================== */
 
 #include "chip.h"
+#include "digital.h"
 #include <stdbool.h>
 
 /* === Macros definitions ====================================================================== */
@@ -123,6 +124,7 @@ int main(void) {
 
     int divisor  = 0;
     bool current_state, last_state = false;
+    digital_output_t led_green = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT);
 
     Chip_SCU_PinMuxSet(LED_R_PORT, LED_R_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_R_FUNC);
     Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
@@ -185,7 +187,7 @@ int main(void) {
         divisor++;
         if (divisor == 5) {
             divisor = 0;
-            Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT);
+            DigitalOutputToggle(led_green);
         }
 
         for (int index = 0; index < 100; index++) {

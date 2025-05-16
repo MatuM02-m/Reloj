@@ -1,0 +1,12 @@
+Trabajo Práctico - Laboratorio 4
+Materia: Electrónica IV
+Autor/es: Matías Milenkovitch
+Fecha: 15/05/2025
+
+Este software ha sido desarrollado con fines estrictamente académicos como parte de un trabajo práctico de la materia Electrónica IV, dictada en Universidad Nacional de Tucumán.
+
+Se permite su uso, copia y modificación únicamente con fines educativos y de evaluación. Queda prohibido su uso comercial o con fines lucrativos sin autorización expresa de los autores.
+
+Este proyecto se entrega tal como está, sin garantías de ningún tipo, explícitas o implícitas.
+
+Copyright (c) 2025, Matías Milenkovitch <matiasmilenko02@gmail.com>
