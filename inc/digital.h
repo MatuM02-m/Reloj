@@ -24,26 +24,36 @@ SPDX-License-Identifier: MIT
  ** @brief Declaraciones del módulo para la gestión de entradas y salidas digitales
  **/
 
-/* === Headers files inclusions ==================================================================================== */
+/* === Headers files inclusions =================================================================================== */
 
 #include <stdint.h>
+#include <stdbool.h>
 
-/* === Header for C++ compatibility ================================================================================ */
+/* === Header for C++ compatibility =============================================================================== */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* === Public macros definitions =================================================================================== */
+/* === Public macros definitions ================================================================================== */
 
-/* === Public data type declarations =============================================================================== */
+/* === Public data type declarations ============================================================================== */
 
 //! Estructura que representa una salida digital
 typedef struct digital_output_s * digital_output_t;
 
-/* === Public variable declarations ================================================================================ */
+//! Estructura que representa una entrada digital
+typedef struct digital_input_s * digital_input_t;
 
-/* === Public function declarations ================================================================================ */
+typedef enum digital_states_e {
+    DIGITAL_INPUT_WAS_DEACTIVATED = -1,
+    DIGITAL_INPUT_NO_CHANGE = 0,
+    DIGITAL_INPUT_WAS_ACTIVATED = 1,
+} digital_states_t;
+
+/* === Public variable declarations =============================================================================== */
+
+/* === Public function declarations =============================================================================== */
 
 /**
  * @brief   Función para crear una salida digital
@@ -75,7 +85,50 @@ void DigitalOutputDeactivate(digital_output_t self);
 */
 void DigitalOutputToggle(digital_output_t self);
 
-/* === End of conditional blocks =================================================================================== */
+/**
+    * @brief   Función para crear una entrada digital
+    *
+    * @param port  Puerto de la entrada digital
+    * @param pin   Pin de la entrada digital
+    * @param inverted Indica si la entrada está invertida
+    * @note   Si inverted es true, la entrada se considera activa cuando el pin está en estado bajo
+    * @return      Estructura que representa la entrada digital
+    */
+digital_input_t DigitalInputCreate(uint8_t port, uint8_t pin, bool inverted);
+
+/**
+ * @brief   Función para leer el estado de una entrada digital
+ *
+ * @param input  Estructura que representa la entrada digital
+ * @return       Estado de la entrada digital
+*/
+bool DigitalInputGetState(digital_input_t input);
+
+/**
+ * @brief   Función para saber si una entrada digital fue activada
+ *
+ * @param input  Estructura que representa la entrada digital
+ * @return       Estado de la entrada digital
+*/
+bool DigitalWasActivated(digital_input_t input);
+
+/**
+ * @brief   Función para saber si una entrada digital fue desactivada
+ *
+ * @param input  Estructura que representa la entrada digital
+ * @return       Estado de la entrada digital
+*/
+bool DigitalWasDeactivated(digital_input_t input);
+
+/**
+ * @brief   Función para saber si una entrada digital cambió de estado
+ *
+ * @param input  Estructura que representa la entrada digital
+ * @return       Estado de la entrada digital
+*/
+enum digital_states_t DigitalWasChanged(digital_input_t input);
+
+/* === End of conditional blocks ================================================================================== */
 
 #ifdef __cplusplus
 }
