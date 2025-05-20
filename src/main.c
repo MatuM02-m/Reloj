@@ -123,7 +123,6 @@
 int main(void) {
 
     int divisor  = 0;
-    bool current_state, last_state = false;
 
     Chip_SCU_PinMuxSet(LED_R_PORT, LED_R_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_R_FUNC);
     Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
@@ -149,38 +148,32 @@ int main(void) {
 
     /******************/
     Chip_SCU_PinMuxSet(TEC_1_PORT, TEC_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_1_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT, false);
     digital_input_t tec_1 = DigitalInputCreate(TEC_1_GPIO, TEC_1_BIT, false);
 
     Chip_SCU_PinMuxSet(TEC_2_PORT, TEC_2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_2_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT, false);
     digital_input_t tec_2 = DigitalInputCreate(TEC_2_GPIO, TEC_2_BIT, false);
 
     Chip_SCU_PinMuxSet(TEC_3_PORT, TEC_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_3_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT, false);
     digital_input_t tec_3 = DigitalInputCreate(TEC_3_GPIO, TEC_3_BIT, false);
 
     Chip_SCU_PinMuxSet(TEC_4_PORT, TEC_4_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_4_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT, false);
     digital_input_t tec_4 = DigitalInputCreate(TEC_4_GPIO, TEC_4_BIT, false);
 
     while (true) {
-        if (DigitalInputGetState(tec_1)) {
+        if (DigitalInputGetState(tec_1) == 0) {
             DigitalOutputActivate(led_blue);
         } else {
             DigitalOutputDeactivate(led_blue);
         }
 
-        //current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT) == 0);
-        if ((DigitalWasActivated(tec_2)) && (DigitalWasDeactivated(tec_2))) {
+        if ((DigitalInputWasActivated(tec_2)) && !(DigitalInputWasDeactivated(tec_2))) {
             DigitalOutputToggle(led_red);
         }
-        //last_state = current_state;
 
-        if (DigitalInputGetState(tec_3)) {
+        if (DigitalInputGetState(tec_3) == 0) {
             DigitalOutputActivate(led_yellow);
         }
-        if (DigitalInputGetState(tec_4)) {
+        if (DigitalInputGetState(tec_4) == 0) {
             DigitalOutputDeactivate(led_yellow);
         }
 

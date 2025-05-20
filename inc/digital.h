@@ -110,7 +110,7 @@ bool DigitalInputGetState(digital_input_t input);
  * @param input  Estructura que representa la entrada digital
  * @return       Estado de la entrada digital
 */
-bool DigitalWasActivated(digital_input_t input);
+bool DigitalInputWasActivated(digital_input_t input);
 
 /**
  * @brief   Función para saber si una entrada digital fue desactivada
@@ -118,7 +118,7 @@ bool DigitalWasActivated(digital_input_t input);
  * @param input  Estructura que representa la entrada digital
  * @return       Estado de la entrada digital
 */
-bool DigitalWasDeactivated(digital_input_t input);
+bool DigitalInputWasDeactivated(digital_input_t input);
 
 /**
  * @brief   Función para saber si una entrada digital cambió de estado
