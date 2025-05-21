@@ -29,6 +29,7 @@ SPDX-License-Identifier: MIT
 #include "bsp.h"
 #include "ciaa.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 /* === Macros definitions ========================================================================================== */
@@ -36,16 +37,6 @@ SPDX-License-Identifier: MIT
 /* === Private data type declarations ============================================================================== */
 
 /*! Estructura que representa una placa */
-struct board_s {
-    digital_output_t led_red;
-    digital_output_t led_yellow;
-    digital_output_t led_green;
-    digital_output_t led_blue;
-    digital_input_t button_1;
-    digital_input_t button_2;
-    digital_input_t button_3;
-    digital_input_t button_4;
-};
 
 /* === Private function declarations =============================================================================== */
 
@@ -58,7 +49,7 @@ struct board_s {
 /* === Public function definitions ============================================================================== */
 
 board_t BoardCreate() {
-    board_t self = malloc(sizeof(struct board_s));
+    struct board_s * self = malloc(sizeof(struct board_s));
     if (self != NULL) {
 
         // Salidas digitales
@@ -90,7 +81,7 @@ board_t BoardCreate() {
         self->button_2 = DigitalInputCreate(TEC_2_GPIO, TEC_2_BIT, false);
 
         Chip_SCU_PinMuxSet(TEC_3_PORT, TEC_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_3_FUNC);
-        self->button_3 = DDigitalInputCreate(TEC_3_GPIO, TEC_3_BIT, false);
+        self->button_3 = DigitalInputCreate(TEC_3_GPIO, TEC_3_BIT, false);
 
         Chip_SCU_PinMuxSet(TEC_4_PORT, TEC_4_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_4_FUNC);
         self->button_4 = DigitalInputCreate(TEC_4_GPIO, TEC_4_BIT, false);

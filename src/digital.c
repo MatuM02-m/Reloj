@@ -26,7 +26,7 @@ SPDX-License-Identifier: MIT
 #include "config.h"
 #include "digital.h"
 #include "chip.h"
-//#include "cia.h" Consultar
+#include "ciaa.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>

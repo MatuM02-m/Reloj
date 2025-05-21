@@ -39,7 +39,16 @@ extern "C" {
 /* === Public data type declarations ============================================================================== */
 
 //! Estructura que representa una placa
-typedef struct board_s * board_t
+typedef struct board_s {
+    digital_output_t led_red;
+    digital_output_t led_yellow;
+    digital_output_t led_green;
+    digital_output_t led_blue;
+    digital_input_t button_1;
+    digital_input_t button_2;
+    digital_input_t button_3;
+    digital_input_t button_4;
+} const * board_t;
 
 /* === Public variable declarations =============================================================================== */
 
