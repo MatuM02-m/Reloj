@@ -46,12 +46,15 @@ void SegmentsUpdate(uint8_t value);
 
 void DigitsTurnOn(uint8_t digit);
 
+void DottTurnOn(void);
+
 /* === Private variable definitions ================================================================================ */
 
 static const struct screen_driver_s screen_driver = {
     .DigitsTurnOff = DigitsTurnOff,
     .SegmentsUpdate = SegmentsUpdate,
     .DigitsTurnOn = DigitsTurnOn,
+    .DottTurnOn = DottTurnOn,
 };
 
 /* === Public variable definitions ================================================================================= */
@@ -125,6 +128,9 @@ void DigitsTurnOn(uint8_t digit) {
     Chip_GPIO_SetValue(LPC_GPIO_PORT, DIGITS_GPIO, (1 << (3 - digit)) & DIGITS_MASK); //Enciende el dígito correspondiente
 }
 
+void DottTurnOn(void) {
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_P_GPIO, SEGMENT_P_BIT, true); //Enciende el segmento P (punto)
+}
 /* === Public function definitions ============================================================================== */
 
 board_t BoardCreate() {

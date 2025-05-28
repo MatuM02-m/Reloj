@@ -127,6 +127,7 @@ void ScreenRefresh(screen_t self) {
 
     self->driver->SegmentsUpdate(segments);
     self->driver->DigitsTurnOn(self->current_digit);
+    self->driver->DottTurnOn();
 }
 
 int ScreenFlashDigits(screen_t self, uint8_t from, uint8_t to, uint16_t frecuency) {
