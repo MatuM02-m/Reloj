@@ -70,9 +70,9 @@ typedef struct screen_driver_s {
 /**
  * @brief   Función para crear una pantalla multiplexada de 7 segmentos
  *
- * @param   digits Número de dígitos de la pantalla
- * @param   driver Estructura que representa el controlador de la pantalla
- * @return  Estructura que representa la pantalla
+ * @param   digits  Número de dígitos de la pantalla
+ * @param   driver  Estructura que representa el controlador de la pantalla
+ * @return          Estructura que representa la pantalla
  */
 screen_t ScreenCreate(uint8_t digits, screen_driver_t driver);
 
@@ -88,10 +88,20 @@ void ScreenWriteBCD(screen_t screen, uint8_t value[], uint8_t size);
 /**
  * @brief   Función para refrescar la pantalla multiplexada de 7 segmentos
  *
- * @param   screen Estructura que representa la pantalla
+ * @param   screen  Estructura que representa la pantalla
  */
 void ScreenRefresh(screen_t screen);
 
+/**
+* @brief   Función para hacer parpadear algunos dígitos de la pantalla multiplexada de 7 segmentos
+ *
+ * @param   screen      Puntero a la estructura que representa la pantalla
+ * @param   from        Posición del primer dígito que se quiere hacer parpadear
+ * @param   to          Posición del último dígito que se quiere hacer parpadear
+ * @param   frecuency   Tiempo que debe estar encendido cada dígito
+ * @return              0 si se ha realizado correctamente, -1 si no se ha podido realizar|
+ */
+int ScreenFlashDigits(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
 /* === End of conditional blocks ================================================================================== */
 

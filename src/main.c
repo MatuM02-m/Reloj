@@ -61,24 +61,25 @@
 
 int main(void) {
 
-    int divisor  = 0;
+    int divisor = 0;
     uint8_t value[4] = {1, 2, 3, 4};
 
     board_t board = BoardCreate();
 
     ScreenWriteBCD(board->screen, value, 4);
+    ScreenFlashDigits(board->screen, 3, 3, 100);
 
     while (true) {
-        
+
         divisor++;
         if (divisor == 5) {
             divisor = 0;
         }
         ScreenRefresh(board->screen);
-        //for (int index = 0; index < 100; index++) {
-            for (int delay = 0; delay < 25000; delay++) {
-                __asm("NOP");
-            }
+        // for (int index = 0; index < 100; index++) {
+        for (int delay = 0; delay < 25000; delay++) {
+            __asm("NOP");
+        }
         //}
     }
 }
