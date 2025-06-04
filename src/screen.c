@@ -46,6 +46,10 @@ struct screen_s {
     uint16_t flashing_frecuency;    //!< Frecuencia del parpadeo en milisegundos
     screen_driver_t driver; //!< Puntero a la estructura que contiene las funciones del driver de la pantalla
     uint8_t values[SCREEN_MAX_DIGITS];  //!< Valores de los segmentos para cada dígito
+    uint8_t dots_flashing_from;  //!< Dígito desde el cual se está haciendo el parpadeo de los puntos decimales
+    uint8_t dots_flashing_to;    //!< Dígito hasta el cual se está haciendo el parpadeo de los puntos decimales
+    uint16_t dots_flashing_frecuency; //!< Frecuencia del parpadeo de los puntos decimales
+    uint8_t dots_flashing_count;  //!< Contador de ciclos encendidos para los puntos decimales
 };
 
 static const uint8_t IMAGES[10] = {
@@ -94,6 +98,9 @@ screen_t ScreenCreate(uint8_t digits, screen_driver_t driver) {
         self->current_digit = 0;
         self->flashing_count = 0;
         self->flashing_frecuency = 0;
+        // self->dots_flashing = false;
+        self->dots_flashing_frecuency = 0;
+        self->dots_flashing_count = 0;
     }
     return self;
 }
@@ -125,9 +132,20 @@ void ScreenRefresh(screen_t self) {
         }
     }
 
+    if (self->dots_flashing_frecuency) {
+        if (self->current_digit == 0) {
+            self->dots_flashing_count = (self->dots_flashing_count + 1) % (self->dots_flashing_frecuency);
+        }
+        if (self->dots_flashing_count < (self->dots_flashing_frecuency / 2)) {
+            segments |= SEGMENT_P; // Encender el punto decimal
+        } else {
+            segments &= ~SEGMENT_P; // Apagar el punto decimal durante el parpadeo
+        }
+    }
+
     self->driver->SegmentsUpdate(segments);
     self->driver->DigitsTurnOn(self->current_digit);
-    self->driver->DottTurnOn();
+    // self->driver->DottTurnOn(2);
 }
 
 int ScreenFlashDigits(screen_t self, uint8_t from, uint8_t to, uint16_t frecuency) {
@@ -141,6 +159,22 @@ int ScreenFlashDigits(screen_t self, uint8_t from, uint8_t to, uint16_t frecuenc
         self->flashing_to = to;
         self->flashing_frecuency = 2 * frecuency;
         self->flashing_count = 0;
+    }
+
+    return result;
+}
+
+int ScreenFlashDots(screen_t self, uint8_t from, uint8_t to, uint16_t frecuency) {
+    int result = 0;
+    if ((from > to) || (from >= SCREEN_MAX_DIGITS) || (to >= SCREEN_MAX_DIGITS)) {
+        result = -1;
+    } else if (!self) {
+        result = -1;
+    } else {
+        self->dots_flashing_from = from;
+        self->dots_flashing_to = to;
+        self->dots_flashing_frecuency = 2 * frecuency;
+        self->dots_flashing_count = 0;
     }
 
     return result;

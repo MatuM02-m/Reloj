@@ -57,13 +57,13 @@ typedef void (*segments_update_t)(uint8_t);
 
 typedef void (*digits_turn_on_t)(uint8_t digit);
 
-typedef void (*dott_turn_on_t)(void);
+// typedef void (*dott_turn_on_t)(uint8_t digit);
 
 typedef struct screen_driver_s {
     digits_turn_off_t DigitsTurnOff;
     segments_update_t SegmentsUpdate;
     digits_turn_on_t DigitsTurnOn;
-    dott_turn_on_t DottTurnOn;
+    // dott_turn_on_t DottTurnOn;
 } const * screen_driver_t;
 
 /* === Public variable declarations =============================================================================== */
@@ -105,6 +105,8 @@ void ScreenRefresh(screen_t screen);
  * @return              0 si se ha realizado correctamente, -1 si no se ha podido realizar|
  */
 int ScreenFlashDigits(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
+
+int ScreenFlashDots(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
 /* === End of conditional blocks ================================================================================== */
 
