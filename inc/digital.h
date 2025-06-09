@@ -60,9 +60,10 @@ typedef enum digital_states_e {
  *
  * @param port  Puerto de la salida digital
  * @param pin   Pin de la salida digital
+ * @param active_high  Indica si la salida es activa en bajo (false) o en alto (true)
  * @return      Estructura que representa la salida digital
 */
-digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin);
+digital_output_t DigitalOutputCreate(uint8_t port, uint8_t pin, bool active_high);
 
 /**
  * @brief   Función para activar una salida digital

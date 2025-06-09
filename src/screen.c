@@ -118,6 +118,7 @@ void ScreenWriteBCD(screen_t self, uint8_t value[], uint8_t size) {
 void ScreenRefresh(screen_t self) {
     uint8_t segments;
     self->driver->DigitsTurnOff();
+    // self->driver->DottTurnOff();
     self->current_digit = (self->current_digit + 1) % self->digits;
 
     segments = self->values[self->current_digit];
@@ -137,6 +138,7 @@ void ScreenRefresh(screen_t self) {
             self->dots_flashing_count = (self->dots_flashing_count + 1) % (self->dots_flashing_frecuency);
         }
         if (self->dots_flashing_count < (self->dots_flashing_frecuency / 2)) {
+            // self->driver->DottTurnOn();
             segments |= SEGMENT_P; // Encender el punto decimal
         } else {
             segments &= ~SEGMENT_P; // Apagar el punto decimal durante el parpadeo

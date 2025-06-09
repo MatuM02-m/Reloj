@@ -190,6 +190,26 @@ extern "C" {
 #define BUZZER_GPIO 5
 #define BUZZER_BIT 2
 
+// Definiciones del LED RGB (activo bajo)
+
+#define PONCHO_RGB_RED_PORT 1
+#define PONCHO_RGB_RED_PIN 4
+#define PONCHO_RGB_RED_FUNC SCU_MODE_FUNC0
+#define PONCHO_RGB_RED_GPIO 0
+#define PONCHO_RGB_RED_BIT 11
+
+#define PONCHO_RGB_GREEN_PORT 1
+#define PONCHO_RGB_GREEN_PIN 5
+#define PONCHO_RGB_GREEN_FUNC SCU_MODE_FUNC0
+#define PONCHO_RGB_GREEN_GPIO 1
+#define PONCHO_RGB_GREEN_BIT 8
+
+#define PONCHO_RGB_BLUE_PORT 1
+#define PONCHO_RGB_BLUE_PIN 3
+#define PONCHO_RGB_BLUE_FUNC SCU_MODE_FUNC0
+#define PONCHO_RGB_BLUE_GPIO 0
+#define PONCHO_RGB_BLUE_BIT 10
+
 /* === Public data type declarations =========================================================== */
  
 /* === Public variable declarations ============================================================ */

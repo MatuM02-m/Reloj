@@ -57,13 +57,16 @@ typedef void (*segments_update_t)(uint8_t);
 
 typedef void (*digits_turn_on_t)(uint8_t digit);
 
-// typedef void (*dott_turn_on_t)(uint8_t digit);
+typedef void (*dott_turn_off_t)(void);
+
+typedef void (*dott_turn_on_t)(void);
 
 typedef struct screen_driver_s {
     digits_turn_off_t DigitsTurnOff;
     segments_update_t SegmentsUpdate;
     digits_turn_on_t DigitsTurnOn;
-    // dott_turn_on_t DottTurnOn;
+    dott_turn_off_t DottTurnOff;
+    dott_turn_on_t DottTurnOn;
 } const * screen_driver_t;
 
 /* === Public variable declarations =============================================================================== */

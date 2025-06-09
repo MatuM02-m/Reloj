@@ -67,10 +67,35 @@ int main(void) {
     board_t board = BoardCreate();
 
     ScreenWriteBCD(board->screen, value, 4);
-    ScreenFlashDigits(board->screen, 3, 3, 100);
-    ScreenFlashDots(board->screen, 2, 2, 50);
+    ScreenFlashDigits(board->screen, 0, 3, 100);
+    ScreenFlashDots(board->screen, 0, 3, 100);
 
     while (true) {
+
+        if (DigitalInputGetState(board->set_time) != 0) {
+            DigitalOutputActivate(board->led_red);
+        }
+        
+        if (DigitalInputGetState(board->set_alarm) != 0) {
+            DigitalOutputDeactivate(board->led_red);
+        }
+
+        if (DigitalInputGetState(board->increase) != 0) {
+            DigitalOutputActivate(board->led_green);
+        } else {
+        }
+        
+        if (DigitalInputGetState(board->decrease) != 0) {
+            DigitalOutputDeactivate(board->led_green);
+        }
+
+        if (DigitalInputGetState(board->accept) != 0) {
+            DigitalOutputActivate(board->led_blue);
+        }
+
+        if (DigitalInputGetState(board->cancel) != 0) {
+            DigitalOutputDeactivate(board->led_blue);
+        }
 
         divisor++;
         if (divisor == 5) {
@@ -81,7 +106,7 @@ int main(void) {
         for (int delay = 0; delay < 25000; delay++) {
             __asm("NOP");
         }
-        //}
+        // }
     }
 }
 

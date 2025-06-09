@@ -44,6 +44,9 @@ extern "C" {
 //! Estructura que representa una placa
 typedef struct board_s {
     digital_output_t buzzer;
+    digital_output_t led_red;
+    digital_output_t led_green;
+    digital_output_t led_blue;
     digital_input_t set_time;
     digital_input_t set_alarm;
     digital_input_t increase;
