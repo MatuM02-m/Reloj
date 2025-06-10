@@ -38,19 +38,33 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations ============================================================================== */
 
-/*! Estructura que representa una placa */
-
 /* === Private function declarations =============================================================================== */
 
+/**
+ * @brief Función para apagar los LEDs de la placa EDU-CIAA
+ * 
+ */
 void CiaaTurnOff(void);
 
+/**
+ * @brief Función para apagar los dígitos de la pantalla
+ * 
+ */
 void DigitsTurnOff(void);
 
+/**
+ * @brief       Función para inicializar los segmentos de la pantalla
+ * 
+ * @param value Segmentos a actualizar, representados como un valor de 8 bits
+ */
 void SegmentsUpdate(uint8_t value);
 
+/**
+ * @brief Función para encender un dígito de la pantalla
+ * 
+ * @param digit Número del dígito a encender (0 a 3)
+ */
 void DigitsTurnOn(uint8_t digit);
-
-// void DottTurnOn(uint8_t digit);
 
 /* === Private variable definitions ================================================================================ */
 
@@ -58,7 +72,6 @@ static const struct screen_driver_s screen_driver = {
     .DigitsTurnOff = DigitsTurnOff,
     .SegmentsUpdate = SegmentsUpdate,
     .DigitsTurnOn = DigitsTurnOn,
-    // .DottTurnOn = DottTurnOn,
 };
 
 /* === Public variable definitions ================================================================================= */
@@ -151,14 +164,6 @@ void DigitsTurnOn(uint8_t digit) {
     Chip_GPIO_SetValue(LPC_GPIO_PORT, DIGITS_GPIO, (1 << (3 - digit)) & DIGITS_MASK); //Enciende el dígito correspondiente
 }
 
-void DottTurnOff(void) {
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_P_GPIO, SEGMENT_P_BIT, false); //El segmento P (punto) va a cero
-}
-
-void DottTurnOn(void) {
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_P_GPIO, SEGMENT_P_BIT, true); //Enciende el segmento P (punto)
-    // Chip_GPIO_SetValue(LPC_GPIO_PORT, SEGMENT_P_GPIO, SEGMENT_P); //Enciende el punto en el dígito correspondiente
-}
 /* === Public function definitions ============================================================================== */
 
 board_t BoardCreate() {

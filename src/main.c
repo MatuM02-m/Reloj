@@ -68,7 +68,7 @@ int main(void) {
 
     ScreenWriteBCD(board->screen, value, 4);
     ScreenFlashDigits(board->screen, 0, 3, 100);
-    ScreenFlashDots(board->screen, 0, 3, 100);
+    ScreenFlashDots(board->screen, 0, 1, 100);
 
     while (true) {
 

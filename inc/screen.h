@@ -49,24 +49,37 @@ extern "C" {
 
 /* === Public data type declarations ============================================================================== */
 
+/**
+ * @brief   Estructura que representa una pantalla multiplexada de 7 segmentos
+ */
 typedef struct screen_s * screen_t;
 
+/**
+ * @brief   Puntero a una función que apaga los dígitos de la pantalla
+ */
 typedef void (*digits_turn_off_t)(void);
 
+/**
+ * @brief   Puntero a una función que actualiza los segmentos de la pantalla
+ *
+ * @param   value  Valor a mostrar en los segmentos
+ */
 typedef void (*segments_update_t)(uint8_t);
 
+/**
+ * @brief   Puntero a una función que enciende un dígito de la pantalla
+ *
+ * @param   digit  Número del dígito a encender (0 a 3)
+ */
 typedef void (*digits_turn_on_t)(uint8_t digit);
 
-typedef void (*dott_turn_off_t)(void);
-
-typedef void (*dott_turn_on_t)(void);
-
+/**
+ * @brief   Estructura que representa el controlador de la pantalla multiplexada de 7 segmentos
+ */
 typedef struct screen_driver_s {
     digits_turn_off_t DigitsTurnOff;
     segments_update_t SegmentsUpdate;
     digits_turn_on_t DigitsTurnOn;
-    dott_turn_off_t DottTurnOff;
-    dott_turn_on_t DottTurnOn;
 } const * screen_driver_t;
 
 /* === Public variable declarations =============================================================================== */
@@ -99,7 +112,7 @@ void ScreenWriteBCD(screen_t screen, uint8_t value[], uint8_t size);
 void ScreenRefresh(screen_t screen);
 
 /**
-* @brief   Función para hacer parpadear algunos dígitos de la pantalla multiplexada de 7 segmentos
+ * @brief   Función para hacer parpadear algunos dígitos de la pantalla multiplexada de 7 segmentos
  *
  * @param   screen      Puntero a la estructura que representa la pantalla
  * @param   from        Posición del primer dígito que se quiere hacer parpadear
@@ -109,6 +122,15 @@ void ScreenRefresh(screen_t screen);
  */
 int ScreenFlashDigits(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
+/**
+ * @brief   Función para hacer parpadear los puntos decimales de la pantalla multiplexada de 7 segmentos
+ *
+ * @param   screen      Puntero a la estructura que representa la pantalla
+ * @param   from        Posición del primer dígito que se quiere hacer parpadear
+ * @param   to          Posición del último dígito que se quiere hacer parpadear
+ * @param   frecuency   Tiempo que debe estar encendido cada punto decimal
+ * @return              0 si se ha realizado correctamente, -1 si no se ha podido realizar|
+ */
 int ScreenFlashDots(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
 /* === End of conditional blocks ================================================================================== */
