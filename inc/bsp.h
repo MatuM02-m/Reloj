@@ -27,6 +27,8 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions =================================================================================== */
 
 #include <stdint.h>
+#include "digital.h"
+#include "screen.h"
 
 /* === Header for C++ compatibility =============================================================================== */
 
@@ -35,9 +37,6 @@ extern "C" {
 #endif
 
 /* === Public macros definitions ================================================================================== */
-
-#include "digital.h"
-#include "screen.h"
 
 /* === Public data type declarations ============================================================================== */
 

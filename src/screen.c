@@ -34,11 +34,6 @@ SPDX-License-Identifier: MIT
 #define SCREEN_MAX_DIGITS 8
 #endif
 
-#define DOT_D1 (1 << 0)
-#define DOT_D2 (1 << 1)
-#define DOT_D3 (1 << 2)
-#define DOT_D4 (1 << 3)
-
 /* === Private data type declarations ============================================================================== */
 
 //! Estructura que representa una pantalla multiplexada de 7 segmentos

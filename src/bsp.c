@@ -17,7 +17,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 SPDX-License-Identifier: MIT
 *********************************************************************************************************************/
 
-/** @file board.c
+/** @file bsp.c
  ** @brief Código fuente del módulo para la gestión de placas
  **/
 
@@ -172,14 +172,14 @@ board_t BoardCreate() {
         CiaaTurnOff();  // Apaga los leds de la EDU_CIAA
 
         // Salidas digitales
-        Chip_SCU_PinMuxSet(PONCHO_RGB_RED_PORT, PONCHO_RGB_RED_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | PONCHO_RGB_RED_FUNC);
-        self->led_red = DigitalOutputCreate(PONCHO_RGB_RED_GPIO, PONCHO_RGB_RED_BIT, false);
+        Chip_SCU_PinMuxSet(SHIELD_RGB_RED_PORT, SHIELD_RGB_RED_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | SHIELD_RGB_RED_FUNC);
+        self->led_red = DigitalOutputCreate(SHIELD_RGB_RED_GPIO, SHIELD_RGB_RED_BIT, false);
 
-        Chip_SCU_PinMuxSet(PONCHO_RGB_GREEN_PORT, PONCHO_RGB_GREEN_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | PONCHO_RGB_GREEN_FUNC);
-        self->led_green = DigitalOutputCreate(PONCHO_RGB_GREEN_GPIO, PONCHO_RGB_GREEN_BIT, false);
+        Chip_SCU_PinMuxSet(SHIELD_RGB_GREEN_PORT, SHIELD_RGB_GREEN_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | SHIELD_RGB_GREEN_FUNC);
+        self->led_green = DigitalOutputCreate(SHIELD_RGB_GREEN_GPIO, SHIELD_RGB_GREEN_BIT, false);
 
-        Chip_SCU_PinMuxSet(PONCHO_RGB_BLUE_PORT, PONCHO_RGB_BLUE_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | PONCHO_RGB_BLUE_FUNC);
-        self->led_blue = DigitalOutputCreate(PONCHO_RGB_BLUE_GPIO, PONCHO_RGB_BLUE_BIT, false);
+        Chip_SCU_PinMuxSet(SHIELD_RGB_BLUE_PORT, SHIELD_RGB_BLUE_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | SHIELD_RGB_BLUE_FUNC);
+        self->led_blue = DigitalOutputCreate(SHIELD_RGB_BLUE_GPIO, SHIELD_RGB_BLUE_BIT, false);
 
         Chip_SCU_PinMuxSet(BUZZER_PORT, BUZZER_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | BUZZER_FUNC);
         self->buzzer = DigitalOutputCreate(BUZZER_PORT, BUZZER_PIN, true);

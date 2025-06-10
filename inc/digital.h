@@ -45,6 +45,7 @@ typedef struct digital_output_s * digital_output_t;
 //! Estructura que representa una entrada digital
 typedef struct digital_input_s * digital_input_t;
 
+//! Estructura que representa los posibles estados de una entrada digital
 typedef enum digital_states_e {
     DIGITAL_INPUT_WAS_DEACTIVATED = -1,
     DIGITAL_INPUT_NO_CHANGE = 0,
