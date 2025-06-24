@@ -31,6 +31,16 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations ============================================================================== */
 
+/**
+ * @brief Definición de la estructura interna del reloj.
+ * @param clock_ticks Cantidad de ticks del reloj.
+ * @param current_time Tiempo actual del reloj.
+ * @param alarm_time Hora de la alarma.
+ * @param alarm_posponed Hora de la alarma pospuesta.
+ * @param alarm_enabled Indica si la alarma está habilitada.
+ * @param valid Indica si el reloj tiene un tiempo válido.
+ * 
+ */
 struct clock_s {
     uint16_t clock_ticks;
     clock_time_t current_time;
@@ -42,20 +52,11 @@ struct clock_s {
 
 /* === Private function declarations =============================================================================== */
 
-clock_time_t ConvertTime(uint8_t time);
-
 /* === Private variable definitions ================================================================================ */
 
 /* === Public variable definitions ================================================================================= */
 
 /* === Private function definitions ================================================================================ */
-
-clock_time_t ConvertTime(uint8_t time) {
-    clock_time_t converted_time = {0};
-    converted_time.time.minutes[0] = time % 10;       // Unidades de minutos
-    converted_time.time.minutes[1] = (time / 10) % 6; // Decenas de minutos
-    return converted_time;
-}
 
 /* === Public function definitions ============================================================================== */
 

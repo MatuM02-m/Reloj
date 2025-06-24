@@ -53,7 +53,31 @@ SPDX-License-Identifier: MIT
 
 /* === Private data type declarations ========================================================== */
 
+/* === Privat function definitions ============================================================= */
+
+/**
+ * @brief           Función para simular el avance del reloj en segundos.
+ * 
+ * @param clock     Reloj a simular.
+ * @param seconds   Segundos a simular.
+ */
 static void SimulateSeconds(clock_t clock, uint8_t seconds);
+
+/**
+ * @brief           Función para simular el avance del reloj en minutos.
+ * 
+ * @param clock     Reloj a simular.
+ * @param minutes   Minutos a simular.
+ */
+static void SimulateMinutes(clock_t clock, uint8_t minutes);
+
+/**
+ * @brief           Función para simular el avance del reloj en horas.
+ * 
+ * @param clock     Reloj a simular.
+ * @param hours     Horas a simular.
+ */
+static void SimulateHours(clock_t clock, uint8_t hours);
 
 /* === Private variable declarations =========================================================== */
 
@@ -82,6 +106,7 @@ static void SimulateHours(clock_t clock, uint8_t hours) {
 
 /* === Public variable definitions ============================================================= */
 
+//!< Variable global para el reloj
 clock_t clock;
 
 /* === Private variable definitions ============================================================ */

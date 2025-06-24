@@ -1,7 +1,7 @@
-Trabajo Práctico - Laboratorio 4
+Trabajo Práctico - Laboratorio 7
 Materia: Electrónica IV
 Autor/es: Matías Milenkovitch
-Fecha: 15/05/2025
+Fecha: 23/06/2025
 
 Este software ha sido desarrollado con fines estrictamente académicos como parte de un trabajo práctico de la materia Electrónica IV, dictada en Universidad Nacional de Tucumán.
 
