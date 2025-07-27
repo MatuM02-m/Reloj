@@ -69,11 +69,11 @@ typedef struct clock_s * clock_t;
 clock_t ClockCreate(uint16_t ticks_per_seconds);
 
 /**
- * @brief       Verifica si el tiempo del reloj es válido.
- * @param clock El reloj a verificar.
- * @return      true si el tiempo es válido, false en caso contrario.
+ * @brief           Verifica si el tiempo del reloj es válido.
+ * @param new_time  Estructura que contiene el nuevo tiempo a verificar.
+ * @return          true si el tiempo es válido, false en caso contrario.
  */
-bool ClockTimeIsValid(clock_t clock);
+bool ClockTimeIsValid(clock_time_t * new_time);
 
 /**
  * @brief        Obtiene el tiempo actual del reloj.
@@ -127,6 +127,8 @@ bool ClockCheckAlarm(clock_t clock);
  * @return          true si se pospuso la alarma correctamente, false en caso contrario.
  */
 bool ClockPostponeAlarm(clock_t clock, uint16_t minutes);
+
+void ClockTimeToBCD(clock_time_t * self, uint8_t * value);
 
 /* === End of conditional blocks ================================================================================== */
 

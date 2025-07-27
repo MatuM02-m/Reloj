@@ -60,11 +60,17 @@ void DigitsTurnOff(void);
 void SegmentsUpdate(uint8_t value);
 
 /**
- * @brief Función para encender un dígito de la pantalla
+ * @brief       Función para encender un dígito de la pantalla
  * 
  * @param digit Número del dígito a encender (0 a 3)
  */
 void DigitsTurnOn(uint8_t digit);
+
+/**
+ * @brief Función para apagar los puntos decimales de la pantalla
+ * 
+ */
+void DotsTurnOff(void);
 
 /* === Private variable definitions ================================================================================ */
 
@@ -72,6 +78,7 @@ static const struct screen_driver_s screen_driver = {
     .DigitsTurnOff = DigitsTurnOff,
     .SegmentsUpdate = SegmentsUpdate,
     .DigitsTurnOn = DigitsTurnOn,
+    // .DotsTurnOff = DotsTurnOff,
 };
 
 /* === Public variable definitions ================================================================================= */
@@ -164,6 +171,10 @@ void DigitsTurnOn(uint8_t digit) {
     Chip_GPIO_SetValue(LPC_GPIO_PORT, DIGITS_GPIO, (1 << (3 - digit)) & DIGITS_MASK); //Enciende el dígito correspondiente
 }
 
+void DotsTurnOff(void) {
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, SEGMENT_P_GPIO, SEGMENT_P_BIT, false); //Apaga el punto decimal
+}
+
 /* === Public function definitions ============================================================================== */
 
 board_t BoardCreate() {
@@ -208,6 +219,12 @@ board_t BoardCreate() {
         self->screen = ScreenCreate(4, &(screen_driver));
     }
     return self;
+}
+
+void SysTickInit(uint32_t ticks) {
+    SystemCoreClockUpdate();
+    SysTick_Config(SystemCoreClock / ticks);
+    NVIC_SetPriority(SysTick_IRQn, (1 << __NVIC_PRIO_BITS) - 1);
 }
 
 /* === End of documentation ======================================================================================== */

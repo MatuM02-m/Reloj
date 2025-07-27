@@ -32,14 +32,14 @@ SPDX-License-Identifier: MIT
 /* === Private data type declarations ============================================================================== */
 
 /**
- * @brief Definición de la estructura interna del reloj.
- * @param clock_ticks Cantidad de ticks del reloj.
- * @param current_time Tiempo actual del reloj.
- * @param alarm_time Hora de la alarma.
- * @param alarm_posponed Hora de la alarma pospuesta.
- * @param alarm_enabled Indica si la alarma está habilitada.
- * @param valid Indica si el reloj tiene un tiempo válido.
- * 
+ * @brief                   Definición de la estructura interna del reloj.
+ * @param clock_ticks       Cantidad de ticks del reloj.
+ * @param current_time      Tiempo actual del reloj.
+ * @param alarm_time        Hora de la alarma.
+ * @param alarm_posponed    Hora de la alarma pospuesta.
+ * @param alarm_enabled     Indica si la alarma está habilitada.
+ * @param valid             Indica si el reloj tiene un tiempo válido.
+ *
  */
 struct clock_s {
     uint16_t clock_ticks;
@@ -64,13 +64,20 @@ clock_t ClockCreate(uint16_t ticks_per_seconds) {
     static struct clock_s self[1]; // Si uso malloc, cada test creará uno nuevo
     memset(self, 0, sizeof(struct clock_s));
     self->valid = false;
-    (void)ticks_per_seconds;
+    self->alarm_enabled = false;
+    self->clock_ticks = ticks_per_seconds;
     return self;
 }
 
-bool ClockTimeIsValid(clock_t clock) {
-    (void)clock;
-    return false;
+bool ClockTimeIsValid(clock_time_t * self) {
+    if (self->time.hours[0] > 2 || self->time.hours[1] > 3) {
+        return false; // Horas inválidas
+    } else if (self->time.minutes[0] > 5 || self->time.minutes[1] > 9) {
+        return false; // Minutos inválidos
+    } else if (self->time.seconds[0] > 5 || self->time.seconds[1] > 9) {
+        return false; // Segundos inválidos
+    }
+    return true;
 }
 
 bool ClockGetTime(clock_t self, clock_time_t * result) {
@@ -81,8 +88,12 @@ bool ClockGetTime(clock_t self, clock_time_t * result) {
 bool ClockSetTime(clock_t self, const clock_time_t * new_time) {
     self->valid = true;
     memcpy(&self->current_time, new_time, sizeof(clock_time_t));
-    (void)new_time;
-    return true;
+    if (ClockTimeIsValid(new_time)) {
+        self->valid = true;
+    } else {
+        self->valid = false;
+    }
+    return self->valid;
 }
 
 void ClockNewTick(clock_t self) {
@@ -155,6 +166,13 @@ bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
         ClockSetAlarm(self, &self->alarm_posponed);
         return true;
     }
+}
+
+void ClockTimeToBCD(clock_time_t * self, uint8_t * value) {
+    value[0] = self->time.hours[1];
+    value[1] = self->time.hours[0];
+    value[2] = self->time.minutes[1];
+    value[3] = self->time.minutes[0];
 }
 
 /* === End of documentation ======================================================================================== */

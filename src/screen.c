@@ -39,20 +39,23 @@ SPDX-License-Identifier: MIT
 //! Estructura que representa una pantalla multiplexada de 7 segmentos
 struct screen_s {
     // Dígitos
-    uint8_t digits; //!< Número de dígitos de la pantalla
-    uint8_t current_digit;  //!< Dígito actual que se está mostrando
-    uint8_t flashing_from;  //!< Dígito desde el cual se está haciendo el parpadeo
-    uint8_t flashing_to;    //!< Dígito hasta el cual se está haciendo el parpadeo
-    uint8_t flashing_count;  //!< Contador de ciclos encendidos
-    uint16_t flashing_frecuency;    //!< Frecuencia del parpadeo en milisegundos
+    uint8_t digits;              //!< Número de dígitos de la pantalla
+    uint8_t current_digit;       //!< Dígito actual que se está mostrando
+    uint8_t flashing_from;       //!< Dígito desde el cual se está haciendo el parpadeo
+    uint8_t flashing_to;         //!< Dígito hasta el cual se está haciendo el parpadeo
+    uint8_t flashing_count;      //!< Contador de ciclos encendidos
+    uint16_t flashing_frecuency; //!< Frecuencia del parpadeo en milisegundos
     // Puntos decimales
-    uint8_t dots_flashing_from;  //!< Dígito desde el cual se está haciendo el parpadeo de los puntos decimales
-    uint8_t dots_flashing_to;    //!< Dígito hasta el cual se está haciendo el parpadeo de los puntos decimales
+    bool dots_on;                     //!< Indica si los puntos decimales están encendidos
+    uint8_t dots_from;                //!< Digito desde el cual se encienden los puntos decimales
+    uint8_t dots_to;                  //!< Digito hasta el cual se encienden los puntos decimales
+    uint8_t dots_flashing_from;       //!< Dígito desde el cual se está haciendo el parpadeo de los puntos decimales
+    uint8_t dots_flashing_to;         //!< Dígito hasta el cual se está haciendo el parpadeo de los puntos decimales
     uint16_t dots_flashing_frecuency; //!< Frecuencia del parpadeo de los puntos decimales
-    uint8_t dots_flashing_count;  //!< Contador de ciclos encendidos para los puntos decimales
+    uint8_t dots_flashing_count;      //!< Contador de ciclos encendidos para los puntos decimales
     // Driver
-    screen_driver_t driver; //!< Puntero a la estructura que contiene las funciones del driver de la pantalla
-    uint8_t values[SCREEN_MAX_DIGITS];  //!< Valores de los segmentos para cada dígito
+    screen_driver_t driver;            //!< Puntero a la estructura que contiene las funciones del driver de la pantalla
+    uint8_t values[SCREEN_MAX_DIGITS]; //!< Valores de los segmentos para cada dígito
 };
 
 static const uint8_t IMAGES[10] = {
@@ -102,6 +105,9 @@ screen_t ScreenCreate(uint8_t digits, screen_driver_t driver) {
         self->flashing_count = 0;
         self->flashing_frecuency = 0;
 
+        self->dots_on = false;
+        self->dots_from = 0;
+        self->dots_to = 0;
         self->dots_flashing_frecuency = 0;
         self->dots_flashing_count = 0;
     }
@@ -136,24 +142,23 @@ void ScreenRefresh(screen_t self) {
         }
     }
 
-    
-    bool current_digit_dot = (self->dots_flashing_frecuency > 0) &&
-    (self->current_digit >= self->dots_flashing_from) &&
-    (self->current_digit <= self->dots_flashing_to);
+    bool current_digit_dot = (self->dots_flashing_frecuency > 0) && (self->current_digit >= self->dots_flashing_from) &&
+                             (self->current_digit <= self->dots_flashing_to);
     if (current_digit_dot) {
         if (self->current_digit == 0) {
             self->dots_flashing_count = (self->dots_flashing_count + 1) % (self->dots_flashing_frecuency);
         }
-        
+
         if (self->dots_flashing_count >= (self->dots_flashing_frecuency / 2)) {
             segments &= ~SEGMENT_P; // Apagar el punto decimal durante el parpadeo
         } else {
             segments |= SEGMENT_P; // Encender el punto decimal
         }
     } else {
-        segments |= SEGMENT_P; 
+        if (self->dots_on && (self->current_digit >= self->dots_from) && (self->current_digit <= self->dots_to)) {
+            segments |= SEGMENT_P; // Encender el punto decimal si está configurado
+        }
     }
-
     self->driver->SegmentsUpdate(segments);
     self->driver->DigitsTurnOn(self->current_digit);
 }
@@ -162,7 +167,7 @@ int ScreenFlashDigits(screen_t self, uint8_t from, uint8_t to, uint16_t frecuenc
     int result = 0;
     if ((from > to) || (from >= SCREEN_MAX_DIGITS) || (to >= SCREEN_MAX_DIGITS)) {
         result = -1;
-    } else if(!self) {
+    } else if (!self) {
         result = -1;
     } else {
         self->flashing_from = from;
@@ -190,4 +195,29 @@ int ScreenFlashDots(screen_t self, uint8_t from, uint8_t to, uint16_t frecuency)
     return result;
 }
 
-/* === End of documentation ======================================================================================== */
+// int ScreenTurnOffDots(screen_t self) {
+//     int result = 0;
+//     if (!self) {
+//         result = -1;
+//     } else {
+//         self->driver->DotsTurnOff();
+//     }
+//     return result;
+// }
+
+int ScreenSetDots(screen_t self, uint8_t from, uint8_t to) {
+    int result = 0;
+    if ((from > to) || (from >= SCREEN_MAX_DIGITS) || (to >= SCREEN_MAX_DIGITS)) {
+        result = -1;
+    } else if (!self) {
+        result = -1;
+    } else {
+        self->dots_from = from;
+        self->dots_to = to;
+        self->dots_on = true; // Indicar que los puntos están encendidos
+    }
+    return result;
+}
+
+/* === End of documentation ========================================================================================
+ */
