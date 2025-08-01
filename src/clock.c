@@ -118,41 +118,38 @@ bool ClockSetTime(clock_t self, const clock_time_t * new_time) {
 void ClockNewTick(clock_t self) {
     self->clock_ticks++;
     
-    if (self->clock_ticks >= 1000) {  // 1000 ticks = 1 segundo
+    if (self->clock_ticks >= 1000) {
         self->clock_ticks = 0;
-        
-        // USAR LA MISMA LÓGICA QUE IncreaseBCD()
-        // seconds[1] = unidades, seconds[0] = decenas
-        
-        // Incrementar segundos (unidades)
-        self->current_time.time.seconds[1]++;
-        if (self->current_time.time.seconds[1] > 9) {
-            self->current_time.time.seconds[1] = 0;
-            // Incrementar segundos (decenas)
-            self->current_time.time.seconds[0]++;
-            if (self->current_time.time.seconds[0] > 5) {
-                self->current_time.time.seconds[0] = 0;
+
+        // Incrementar segundos (unidades en [0])
+        self->current_time.time.seconds[0]++;
+        if (self->current_time.time.seconds[0] > 9) {
+            self->current_time.time.seconds[0] = 0;
+            // Incrementar segundos (decenas en [1])
+            self->current_time.time.seconds[1]++;
+            if (self->current_time.time.seconds[1] > 5) {
+                self->current_time.time.seconds[1] = 0;
                 
-                // Incrementar minutos (unidades)
-                self->current_time.time.minutes[1]++;
-                if (self->current_time.time.minutes[1] > 9) {
-                    self->current_time.time.minutes[1] = 0;
-                    // Incrementar minutos (decenas)
-                    self->current_time.time.minutes[0]++;
-                    if (self->current_time.time.minutes[0] > 5) {
-                        self->current_time.time.minutes[0] = 0;
+                // Incrementar minutos (unidades en [0])
+                self->current_time.time.minutes[0]++;
+                if (self->current_time.time.minutes[0] > 9) {
+                    self->current_time.time.minutes[0] = 0;
+                    // Incrementar minutos (decenas en [1])
+                    self->current_time.time.minutes[1]++;
+                    if (self->current_time.time.minutes[1] > 5) {
+                        self->current_time.time.minutes[1] = 0;
                         
-                        // Incrementar horas (unidades)
-                        self->current_time.time.hours[1]++;
-                        if (self->current_time.time.hours[1] > 9) {
-                            self->current_time.time.hours[1] = 0;
-                            // Incrementar horas (decenas)
-                            self->current_time.time.hours[0]++;
+                        // Incrementar horas (unidades en [0])
+                        self->current_time.time.hours[0]++;
+                        if (self->current_time.time.hours[0] > 9) {
+                            self->current_time.time.hours[0] = 0;
+                            // Incrementar horas (decenas en [1])
+                            self->current_time.time.hours[1]++;
                         }
                         
-                        // Verificar límite de 24 horas (23:59 -> 00:00)
-                        if ((self->current_time.time.hours[0] == 2) && 
-                            (self->current_time.time.hours[1] == 4)) {
+                        // Verificar límite de 24 horas: 23 (decenas=2, unidades=3) -> 00
+                        if ((self->current_time.time.hours[1] == 2) && 
+                            (self->current_time.time.hours[0] == 4)) {
                             self->current_time.time.hours[0] = 0;
                             self->current_time.time.hours[1] = 0;
                         }
