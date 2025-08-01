@@ -70,12 +70,31 @@ clock_t ClockCreate(uint16_t ticks_per_seconds) {
 }
 
 bool ClockTimeIsValid(clock_time_t * self) {
-    if (self->time.hours[0] > 2 || self->time.hours[1] > 3) {
-        return false; // Horas inválidas
-    } else if (self->time.minutes[0] > 5 || self->time.minutes[1] > 9) {
-        return false; // Minutos inválidos
-    } else if (self->time.seconds[0] > 5 || self->time.seconds[1] > 9) {
-        return false; // Segundos inválidos
+    // Validar horas: 00-23
+    if (self->time.hours[0] > 2) {
+        return false; // Decena de horas no puede ser mayor a 2
+    }
+    if ((self->time.hours[0] == 2) && (self->time.hours[1] > 3)) {
+        return false; // Si decena es 2, unidad no puede ser mayor a 3 (máximo 23)
+    }
+    if (self->time.hours[1] > 9) {
+        return false; // Unidad de horas no puede ser mayor a 9
+    }
+
+    // Validar minutos: 00-59
+    if (self->time.minutes[0] > 5) {
+        return false; // Decena de minutos no puede ser mayor a 5
+    }
+    if (self->time.minutes[1] > 9) {
+        return false; // Unidad de minutos no puede ser mayor a 9
+    }
+    
+    // Validar segundos: 00-59
+    if (self->time.seconds[0] > 5) {
+        return false; // Decena de segundos no puede ser mayor a 5
+    }
+    if (self->time.seconds[1] > 9) {
+        return false; // Unidad de segundos no puede ser mayor a 9
     }
     return true;
 }
@@ -98,27 +117,48 @@ bool ClockSetTime(clock_t self, const clock_time_t * new_time) {
 
 void ClockNewTick(clock_t self) {
     self->clock_ticks++;
-    if (self->clock_ticks == 5) {
+    
+    if (self->clock_ticks >= 1000) {  // 1000 ticks = 1 segundo
         self->clock_ticks = 0;
-        self->current_time.time.seconds[0]++;
-        if (self->current_time.time.seconds[0] > 9) {
-            self->current_time.time.seconds[0] = 0;
-            self->current_time.time.seconds[1] = 1;
-        } else if (self->current_time.time.seconds[1] > 5) {
+        
+        // USAR LA MISMA LÓGICA QUE IncreaseBCD()
+        // seconds[1] = unidades, seconds[0] = decenas
+        
+        // Incrementar segundos (unidades)
+        self->current_time.time.seconds[1]++;
+        if (self->current_time.time.seconds[1] > 9) {
             self->current_time.time.seconds[1] = 0;
-            self->current_time.time.minutes[0]++;
-        } else if (self->current_time.time.minutes[0] > 9) {
-            self->current_time.time.minutes[0] = 0;
-            self->current_time.time.minutes[1]++;
-        } else if (self->current_time.time.minutes[1] > 5) {
-            self->current_time.time.minutes[1] = 0;
-            self->current_time.time.hours[0]++;
-        } else if (self->current_time.time.hours[0] > 9 && self->current_time.time.hours[1] < 2) {
-            self->current_time.time.hours[0] = 0;
-            self->current_time.time.hours[1]++;
-        } else if (self->current_time.time.hours[1] > 2 && self->current_time.time.hours[0] > 3) {
-            self->current_time.time.hours[0] = 0;
-            self->current_time.time.hours[1] = 0;
+            // Incrementar segundos (decenas)
+            self->current_time.time.seconds[0]++;
+            if (self->current_time.time.seconds[0] > 5) {
+                self->current_time.time.seconds[0] = 0;
+                
+                // Incrementar minutos (unidades)
+                self->current_time.time.minutes[1]++;
+                if (self->current_time.time.minutes[1] > 9) {
+                    self->current_time.time.minutes[1] = 0;
+                    // Incrementar minutos (decenas)
+                    self->current_time.time.minutes[0]++;
+                    if (self->current_time.time.minutes[0] > 5) {
+                        self->current_time.time.minutes[0] = 0;
+                        
+                        // Incrementar horas (unidades)
+                        self->current_time.time.hours[1]++;
+                        if (self->current_time.time.hours[1] > 9) {
+                            self->current_time.time.hours[1] = 0;
+                            // Incrementar horas (decenas)
+                            self->current_time.time.hours[0]++;
+                        }
+                        
+                        // Verificar límite de 24 horas (23:59 -> 00:00)
+                        if ((self->current_time.time.hours[0] == 2) && 
+                            (self->current_time.time.hours[1] == 4)) {
+                            self->current_time.time.hours[0] = 0;
+                            self->current_time.time.hours[1] = 0;
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -144,35 +184,57 @@ bool ClockCheckAlarm(clock_t self) {
 }
 
 bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
-    memcpy(&self->alarm_posponed, &self->alarm_time, sizeof(clock_time_t));
     if (minutes_postpone == 0) {
         return false; // No hay nada que posponer
-    } else {
-        self->alarm_posponed.time.minutes[0] += minutes_postpone % 10;
-        self->alarm_posponed.time.minutes[1] += (minutes_postpone / 10) % 6;
-        if (self->alarm_posponed.time.minutes[0] > 9) {
-            self->alarm_posponed.time.minutes[0] = 0;
-            self->alarm_posponed.time.minutes[1]++;
-        } else if (self->alarm_posponed.time.minutes[1] > 5) {
-            self->alarm_posponed.time.minutes[1] = 0;
-            self->alarm_posponed.time.hours[0]++;
-        } else if (self->alarm_posponed.time.hours[0] > 9 && self->alarm_posponed.time.hours[1] < 2) {
-            self->alarm_posponed.time.hours[0] = 0;
-            self->alarm_posponed.time.hours[1]++;
-        } else if (self->alarm_posponed.time.hours[1] > 2 && self->alarm_posponed.time.hours[0] > 3) {
-            self->alarm_posponed.time.hours[0] = 0;
-            self->alarm_posponed.time.hours[1] = 0;
-        }
-        ClockSetAlarm(self, &self->alarm_posponed);
-        return true;
     }
+    
+    // Copiar la hora actual de la alarma
+    memcpy(&self->alarm_posponed, &self->alarm_time, sizeof(clock_time_t));
+    
+    // Convertir minutos BCD a decimal para facilitar el cálculo
+    uint8_t total_minutes = (self->alarm_posponed.time.minutes[0] * 10) + 
+                           self->alarm_posponed.time.minutes[1] + 
+                           minutes_postpone;
+    
+    uint8_t total_hours = (self->alarm_posponed.time.hours[0] * 10) + 
+                         self->alarm_posponed.time.hours[1];
+    
+    // Manejar overflow de minutos
+    while (total_minutes >= 60) {
+        total_minutes -= 60;
+        total_hours++;
+    }
+    
+    // Manejar overflow de horas (formato 24h)
+    if (total_hours >= 24) {
+        total_hours = total_hours % 24;
+    }
+    
+    // Convertir de vuelta a BCD
+    self->alarm_posponed.time.minutes[0] = total_minutes / 10;
+    self->alarm_posponed.time.minutes[1] = total_minutes % 10;
+    self->alarm_posponed.time.hours[0] = total_hours / 10;
+    self->alarm_posponed.time.hours[1] = total_hours % 10;
+    
+    // Establecer la nueva alarma
+    ClockSetAlarm(self, &self->alarm_posponed);
+    return true;
 }
 
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value) {
     value[0] = self->time.hours[1];
-    value[1] = self->time.hours[0];
+    value[1] = self->time.hours[0];  
     value[2] = self->time.minutes[1];
     value[3] = self->time.minutes[0];
+}
+
+bool ClockGetAlarm(clock_t self, clock_time_t *alarm_time) {
+    bool result = false;
+    if ((self) && (alarm_time)) {
+        memcpy(alarm_time, &self->alarm_time, sizeof(clock_time_t));
+        result = true;
+    }
+    return result;
 }
 
 /* === End of documentation ======================================================================================== */

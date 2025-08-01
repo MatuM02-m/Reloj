@@ -130,6 +130,8 @@ bool ClockPostponeAlarm(clock_t clock, uint16_t minutes);
 
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value);
 
+bool ClockGetAlarm(clock_t clock, clock_time_t * alarm);
+
 /* === End of conditional blocks ================================================================================== */
 
 #ifdef __cplusplus
