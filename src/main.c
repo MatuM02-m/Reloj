@@ -41,12 +41,12 @@ SPDX-License-Identifier: MIT
 /* === Private data type declarations ========================================================== */
 
 typedef enum {
-    CLOCK_MODE_UNSET_TIME,
-    CLOCK_MODE_DISPLAY,
-    CLOCK_MODE_SET_HOURS,
-    CLOCK_MODE_SET_MINUTES,
-    CLOCK_MODE_SET_ALARM_HOURS,
-    CLOCK_MODE_SET_ALARM_MINUTES,
+    CLOCK_MODE_UNSET_TIME,          // Modo para establecer la hora inicial
+    CLOCK_MODE_DISPLAY,             // Modo de visualización normal
+    CLOCK_MODE_SET_HOURS,           // Modo para establecer horas
+    CLOCK_MODE_SET_MINUTES,         // Modo para establecer minutos
+    CLOCK_MODE_SET_ALARM_HOURS,     // Modo para establecer horas de la alarma
+    CLOCK_MODE_SET_ALARM_MINUTES,   // Modo para establecer minutos de la alarma
 } clock_mode_t;
 
 /* === Private variable declarations =========================================================== */
@@ -83,18 +83,64 @@ static uint32_t timeout_count = 0;
 
 /* === Private function declarations =========================================================== */
 
+/**
+ * @brief Función para incrementar un número BCD (Binary-Coded Decimal) con límite.
+ * 
+ * @param numero Puntero al número BCD a incrementar.
+ * @param limite Valor límite para el número BCD, representado como un arreglo de dos elementos:
+ *              - limite[0]: decena (0-2 para horas, 0-5 para minutos/segundos)
+ *              - limite[1]: unidad (0-3 para horas, 0-9 para minutos/segundos)
+ */
 void IncreaseBCD(uint8_t * numero, const uint8_t limite[2]);
 
+/**
+ * @brief Función para decrementar un número BCD (Binary-Coded Decimal) con límite.
+ * 
+ * @param numero Puntero al número BCD a decrementar.
+ * @param limite Valor límite para el número BCD, representado como un arreglo de dos elementos: 
+ *              - limite[0]: decena (0-2 para horas, 0-5 para minutos/segundos)
+ *              - limite[1]: unidad (0-3 para horas, 0-9 para minutos/segundos)
+ */
 void DecreaseBCD(uint8_t * numero, const uint8_t limite[2]);
 
+/**
+ * @brief Cambia el modo del reloj y actualiza la pantalla según el nuevo modo.
+ * 
+ * @param mode Nuevo modo del reloj.
+ */
 void ModeChange(clock_mode_t mode);
 
+/**
+ * @brief Actualiza el contenido de la pantalla según el modo actual del reloj.
+ * 
+ * Esta función escribe los valores BCD correspondientes en la pantalla según el modo actual.
+ */
 void UpdateDisplayContent(void);
 
+/**
+ * @brief Verifica si una entrada digital ha sido presionada durante un tiempo largo.
+ * 
+ * @param input Entrada digital a verificar.
+ * @param press_duration Puntero al contador de duración de la presión.
+ * @param flag Puntero a un flag que indica si se ha detectado una presión larga.
+ * @return true Si se detectó una presión larga.
+ * @return false Si no se detectó una presión larga.
+ */
 bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag);
 
+/**
+ * @brief Reinicia el contador de tiempo de configuración.
+ * 
+ * Esta función se utiliza para reiniciar el contador que controla el tiempo de configuración del reloj.
+ */
 void ResetConfigTimeout(void);
 
+/**
+ * @brief Verifica si el reloj está en modo de configuración.
+ * 
+ * @return true Si el reloj está en modo de configuración.
+ * @return false Si el reloj no está en modo de configuración.
+ */
 bool IsInConfigMode(void);
 
 /* === Public variable definitions ============================================================= */
@@ -258,15 +304,13 @@ bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag) 
     return false;
 }
 
-void ResetConfigTimeout(void){
+void ResetConfigTimeout(void) {
     timeout_count = 0;
 }
 
 bool IsInConfigMode(void) {
-    return (clock_mode == CLOCK_MODE_SET_HOURS || 
-            clock_mode == CLOCK_MODE_SET_MINUTES ||
-            clock_mode == CLOCK_MODE_SET_ALARM_HOURS || 
-            clock_mode == CLOCK_MODE_SET_ALARM_MINUTES);
+    return (clock_mode == CLOCK_MODE_SET_HOURS || clock_mode == CLOCK_MODE_SET_MINUTES ||
+            clock_mode == CLOCK_MODE_SET_ALARM_HOURS || clock_mode == CLOCK_MODE_SET_ALARM_MINUTES);
 }
 
 /* === Public function implementation ========================================================= */
@@ -278,11 +322,11 @@ bool IsInConfigMode(void) {
  */
 int main(void) {
 
-    SysTickInit(TICKS_PER_SECOND);
-    clock = ClockCreate(TICKS_PER_SECOND);
-    board = BoardCreate();
+    SysTickInit(TICKS_PER_SECOND);         // Inicializar timer del sistema
+    clock = ClockCreate(TICKS_PER_SECOND); // Crear el reloj
+    board = BoardCreate();                 // Inicializar la placa
 
-    ModeChange(CLOCK_MODE_UNSET_TIME);
+    ModeChange(CLOCK_MODE_UNSET_TIME); // Cambiar al modo de configuración inicial
 
     while (true) {
         switch (clock_mode) {
@@ -358,6 +402,7 @@ int main(void) {
                 ModeChange(CLOCK_MODE_UNSET_TIME);
             }
             break;
+
         case CLOCK_MODE_SET_MINUTES:
             if (DigitalInputWasActivated(board->increase)) {
                 ResetConfigTimeout();
@@ -376,6 +421,7 @@ int main(void) {
                 ModeChange(CLOCK_MODE_UNSET_TIME);
             }
             break;
+
         case CLOCK_MODE_SET_ALARM_HOURS:
             if (DigitalInputWasActivated(board->increase)) {
                 ResetConfigTimeout();
@@ -394,6 +440,7 @@ int main(void) {
                 ModeChange(CLOCK_MODE_DISPLAY);
             }
             break;
+
         case CLOCK_MODE_SET_ALARM_MINUTES:
             if (DigitalInputWasActivated(board->increase)) {
                 ResetConfigTimeout();
@@ -413,6 +460,7 @@ int main(void) {
                 ModeChange(CLOCK_MODE_DISPLAY);
             }
             break;
+
         default:
             break;
         }
@@ -446,10 +494,10 @@ void SysTick_Handler(void) {
         timeout_count++;
         if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
             timeout_count = 0;
-            ModeChange(CLOCK_MODE_UNSET_TIME);  // Cancelar configuración
+            ModeChange(CLOCK_MODE_UNSET_TIME); // Cancelar configuración
         }
     } else {
-        timeout_count = 0;  // Resetear cuando no está en configuración
+        timeout_count = 0; // Resetear cuando no está en configuración
     }
 
     // Solo actualizar la pantalla cuando estamos en modo DISPLAY
