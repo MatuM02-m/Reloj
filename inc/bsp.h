@@ -66,6 +66,11 @@ typedef struct board_s {
 */
 board_t BoardCreate();
 
+/**
+ * @brief   Función para inicializar el SysTick
+ *
+ * @param   ticks  Cantidad de ticks por segundo
+ */
 void SysTickInit(uint32_t ticks);
 
 /* === End of conditional blocks ================================================================================== */

@@ -133,8 +133,22 @@ int ScreenFlashDigits(screen_t screen, uint8_t from, uint8_t to, uint16_t frecue
  */
 int ScreenFlashDots(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
+/**
+ * @brief   Función para apagar los puntos decimales de la pantalla multiplexada de 7 segmentos
+ *
+ * @param   screen  Estructura que representa la pantalla
+ * @return          0 si se ha realizado correctamente, -1 si no se ha podido realizar|
+ */
 int ScreenClearDots(screen_t screen);
 
+/**
+ * @brief   Función para encender los puntos decimales de la pantalla multiplexada de 7 segmentos
+ *
+ * @param   screen  Estructura que representa la pantalla
+ * @param   from    Posición del primer dígito que se quiere encender
+ * @param   to      Posición del último dígito que se quiere encender
+ * @return          0 si se ha realizado correctamente, -1 si no se ha podido realizar|
+ */
 int ScreenSetDots(screen_t screen, uint8_t from, uint8_t to);
 
 /* === End of conditional blocks ================================================================================== */

@@ -251,7 +251,6 @@ void ClockUpdateAlarmVisual(clock_t self, board_t board, bool alarm_ringing) {
         DigitalOutputDeactivate(board->led_red);
         DigitalOutputActivate(board->led_green);
 
-        // Solo punto del último dígito (posición 3)
         ScreenSetDots(board->screen, 3, 3);
 
     } else {
@@ -260,7 +259,6 @@ void ClockUpdateAlarmVisual(clock_t self, board_t board, bool alarm_ringing) {
         DigitalOutputDeactivate(board->led_red);
         DigitalOutputDeactivate(board->led_green);
 
-        // Apagar todos los puntos fijos
         ScreenClearDots(board->screen);
     }
 }

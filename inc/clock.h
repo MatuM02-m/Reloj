@@ -129,12 +129,34 @@ bool ClockCheckAlarm(clock_t clock);
  */
 bool ClockPostponeAlarm(clock_t clock, uint16_t minutes);
 
+/**
+ * @brief           Convierte el tiempo del reloj a formato BCD.
+ * @param self      Puntero al tiempo del reloj a convertir.
+ * @param value     Puntero al array donde se almacenará el valor BCD.
+ */
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value);
 
+/**
+ * @brief           Obtiene el tiempo de la alarma del reloj.
+ * @param clock     El reloj del cual obtener el tiempo de la alarma.
+ * @param alarm     Puntero donde se almacenará el tiempo de la alarma.
+ * @return          true si se obtuvo el tiempo de la alarma correctamente, false en caso contrario.
+ */
 bool ClockGetAlarm(clock_t clock, clock_time_t * alarm);
 
+/**
+ * @brief           Comprueba si la alarma del reloj está habilitada.
+ * @param clock     El reloj a verificar.
+ * @return          true si la alarma está habilitada, false en caso contrario.
+ */
 bool ClockAlarmIsEnabled(clock_t clock);
 
+/**
+ * @brief           Actualiza el contenido de la pantalla del reloj según el modo actual.
+ * @param clock     El reloj del cual se actualizará la pantalla.
+ * @param board     Estructura que representa la placa de hardware.
+ * @param alarm_ringing Indica si la alarma está sonando.
+ */
 void ClockUpdateAlarmVisual(clock_t clock, board_t board, bool alarm_ringing);
 
 /* === End of conditional blocks ================================================================================== */
