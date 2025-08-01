@@ -32,9 +32,11 @@ SPDX-License-Identifier: MIT
 
 /* === Macros definitions ====================================================================== */
 
-#define TICKS_PER_SECOND           1000
+#define TICKS_PER_SECOND 1000
 
 #define LONG_PRESS_THRESHOLD_TICKS (3 * TICKS_PER_SECOND)
+
+#define CONFIG_TIMEOUT_TICKS (30 * TICKS_PER_SECOND)
 
 /* === Private data type declarations ========================================================== */
 
@@ -77,6 +79,8 @@ static bool set_alarm_long_press_detected = false;
 
 static bool alarm_ringing = false;
 
+static uint32_t timeout_count = 0;
+
 /* === Private function declarations =========================================================== */
 
 void IncreaseBCD(uint8_t * numero, const uint8_t limite[2]);
@@ -88,6 +92,10 @@ void ModeChange(clock_mode_t mode);
 void UpdateDisplayContent(void);
 
 bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag);
+
+void ResetConfigTimeout(void);
+
+bool IsInConfigMode(void);
 
 /* === Public variable definitions ============================================================= */
 
@@ -250,6 +258,16 @@ bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag) 
     return false;
 }
 
+void ResetConfigTimeout(void){
+    timeout_count = 0;
+}
+
+bool IsInConfigMode(void) {
+    return (clock_mode == CLOCK_MODE_SET_HOURS || 
+            clock_mode == CLOCK_MODE_SET_MINUTES ||
+            clock_mode == CLOCK_MODE_SET_ALARM_HOURS || 
+            clock_mode == CLOCK_MODE_SET_ALARM_MINUTES);
+}
 
 /* === Public function implementation ========================================================= */
 
@@ -324,58 +342,74 @@ int main(void) {
 
         case CLOCK_MODE_SET_HOURS:
             if (DigitalInputWasActivated(board->increase)) {
+                ResetConfigTimeout();
                 IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->decrease)) {
+                ResetConfigTimeout();
                 DecreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->accept)) {
+                ResetConfigTimeout();
                 ClockSetTime(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_MINUTES);
             } else if (DigitalInputWasActivated(board->cancel)) {
+                ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_UNSET_TIME);
             }
             break;
         case CLOCK_MODE_SET_MINUTES:
             if (DigitalInputWasActivated(board->increase)) {
+                ResetConfigTimeout();
                 IncreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->decrease)) {
+                ResetConfigTimeout();
                 DecreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->accept)) {
+                ResetConfigTimeout();
                 ClockSetTime(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
+                ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_UNSET_TIME);
             }
             break;
         case CLOCK_MODE_SET_ALARM_HOURS:
             if (DigitalInputWasActivated(board->increase)) {
+                ResetConfigTimeout();
                 IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->decrease)) {
+                ResetConfigTimeout();
                 DecreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->accept)) {
+                ResetConfigTimeout();
                 ClockSetAlarm(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
             } else if (DigitalInputWasActivated(board->cancel)) {
+                ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_DISPLAY);
             }
             break;
         case CLOCK_MODE_SET_ALARM_MINUTES:
             if (DigitalInputWasActivated(board->increase)) {
+                ResetConfigTimeout();
                 IncreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->decrease)) {
+                ResetConfigTimeout();
                 DecreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
                 UpdateDisplayContent();
             } else if (DigitalInputWasActivated(board->accept)) {
+                ResetConfigTimeout();
                 ClockSetAlarm(clock, &time_to_display);
                 ClockEnableAlarm(clock, true);
                 ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
+                ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_DISPLAY);
             }
             break;
@@ -407,6 +441,16 @@ void SysTick_Handler(void) {
     }
 
     count++;
+
+    if (IsInConfigMode()) {
+        timeout_count++;
+        if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
+            timeout_count = 0;
+            ModeChange(CLOCK_MODE_UNSET_TIME);  // Cancelar configuración
+        }
+    } else {
+        timeout_count = 0;  // Resetear cuando no está en configuración
+    }
 
     // Solo actualizar la pantalla cuando estamos en modo DISPLAY
     if (clock_mode == CLOCK_MODE_DISPLAY && (count % 100) == 0) {
