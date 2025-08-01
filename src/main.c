@@ -159,7 +159,7 @@ void ModeChange(clock_mode_t actual) {
     switch (clock_mode) {
     case CLOCK_MODE_UNSET_TIME:
         ScreenFlashDigits(board->screen, 0, 3, 100);
-        ScreenFlashDots(board->screen, 1, 1, 200);
+        ScreenFlashDots(board->screen, 1, 1, 100);
         memset(&time_to_display, 0, sizeof(clock_time_t));
         break;
 
@@ -291,11 +291,11 @@ int main(void) {
             if (set_time_long_press_detected) {
                 set_time_long_press_detected = false;  // Reset flag
                 ClockGetTime(clock, &time_to_display); // Obtener tiempo actual
-                ModeChange(CLOCK_MODE_SET_HOURS);
+                ModeChange(CLOCK_MODE_SET_MINUTES);
             } else if (set_alarm_long_press_detected) {
                 set_alarm_long_press_detected = false;  // Reset flag
                 ClockGetAlarm(clock, &time_to_display); // Obtener alarma actual
-                ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
+                ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
             }
             break;
 
@@ -304,11 +304,11 @@ int main(void) {
             if (set_time_long_press_detected) {
                 set_time_long_press_detected = false;
                 ClockGetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_HOURS);
+                ModeChange(CLOCK_MODE_SET_MINUTES);
             } else if (set_alarm_long_press_detected) {
                 set_alarm_long_press_detected = false;
                 ClockGetAlarm(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
+                ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
             }
 
             // Actualizar estado de alarma
@@ -352,7 +352,7 @@ int main(void) {
             } else if (DigitalInputWasActivated(board->accept)) {
                 ResetConfigTimeout();
                 ClockSetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_MINUTES);
+                ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_UNSET_TIME);
@@ -370,7 +370,7 @@ int main(void) {
             } else if (DigitalInputWasActivated(board->accept)) {
                 ResetConfigTimeout();
                 ClockSetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_DISPLAY);
+                ModeChange(CLOCK_MODE_SET_HOURS);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_UNSET_TIME);
@@ -388,7 +388,7 @@ int main(void) {
             } else if (DigitalInputWasActivated(board->accept)) {
                 ResetConfigTimeout();
                 ClockSetAlarm(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
+                ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_DISPLAY);
@@ -407,7 +407,7 @@ int main(void) {
                 ResetConfigTimeout();
                 ClockSetAlarm(clock, &time_to_display);
                 ClockEnableAlarm(clock, true);
-                ModeChange(CLOCK_MODE_DISPLAY);
+                ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
                 ModeChange(CLOCK_MODE_DISPLAY);
