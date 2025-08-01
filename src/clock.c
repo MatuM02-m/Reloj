@@ -172,7 +172,6 @@ bool ClockSetAlarm(clock_t self, const clock_time_t * new_alarm_time) {
 
 bool ClockCheckAlarm(clock_t self) {
     if (self->alarm_enabled) {
-        // Solo comparar horas y minutos, NO segundos
         if ((self->current_time.time.hours[0] == self->alarm_time.time.hours[0]) &&
             (self->current_time.time.hours[1] == self->alarm_time.time.hours[1]) &&
             (self->current_time.time.minutes[0] == self->alarm_time.time.minutes[0]) &&
@@ -190,15 +189,10 @@ bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
 
     // Copiar la hora actual de la alarma
     memcpy(&self->alarm_posponed, &self->alarm_time, sizeof(clock_time_t));
+    
+    uint8_t total_minutes = (self->alarm_posponed.time.minutes[1] * 10) + self->alarm_posponed.time.minutes[0] + minutes_postpone;
 
-    // CORRECCIÓN: Convertir BCD a decimal usando el mapeo correcto
-    // [0] = unidades, [1] = decenas
-    uint8_t total_minutes = (self->alarm_posponed.time.minutes[1] * 10) + // decenas
-                            self->alarm_posponed.time.minutes[0] +        // unidades
-                            minutes_postpone;
-
-    uint8_t total_hours = (self->alarm_posponed.time.hours[1] * 10) + // decenas
-                          self->alarm_posponed.time.hours[0];         // unidades
+    uint8_t total_hours = (self->alarm_posponed.time.hours[1] * 10) + self->alarm_posponed.time.hours[0];
 
     // Manejar overflow de minutos
     while (total_minutes >= 60) {
@@ -211,8 +205,6 @@ bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
         total_hours = total_hours % 24;
     }
 
-    // CORRECCIÓN: Convertir de vuelta a BCD usando el mapeo correcto
-    // [0] = unidades, [1] = decenas
     self->alarm_posponed.time.minutes[0] = total_minutes % 10; // unidades
     self->alarm_posponed.time.minutes[1] = total_minutes / 10; // decenas
     self->alarm_posponed.time.hours[0] = total_hours % 10;     // unidades
