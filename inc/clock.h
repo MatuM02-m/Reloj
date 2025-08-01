@@ -26,6 +26,7 @@ SPDX-License-Identifier: MIT
 
 /* === Headers files inclusions =================================================================================== */
 
+#include "bsp.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -131,6 +132,10 @@ bool ClockPostponeAlarm(clock_t clock, uint16_t minutes);
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value);
 
 bool ClockGetAlarm(clock_t clock, clock_time_t * alarm);
+
+bool ClockAlarmIsEnabled(clock_t clock);
+
+void ClockUpdateAlarmVisual(clock_t clock, board_t board, bool alarm_ringing);
 
 /* === End of conditional blocks ================================================================================== */
 

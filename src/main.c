@@ -75,6 +75,8 @@ static bool set_time_long_press_detected = false;
 
 static bool set_alarm_long_press_detected = false;
 
+static bool alarm_ringing = false;
+
 /* === Private function declarations =========================================================== */
 
 void IncreaseBCD(uint8_t * numero, const uint8_t limite[2]);
@@ -93,45 +95,44 @@ bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag);
 
 /* === Private function implementation ========================================================= */
 
-void IncreaseBCD(uint8_t *numero, const uint8_t limite[2]) {
-    // Detectar si son horas por el límite
+void IncreaseBCD(uint8_t * numero, const uint8_t limite[2]) {
     bool is_hours = (limite[0] == 2 && limite[1] == 3);
-    
-    numero[0]++;  // Incrementar unidades (ahora en posición [0])
+
+    numero[0]++; // Incrementar unidades
     if (numero[0] > 9) {
         numero[0] = 0;
-        numero[1]++;  // Incrementar decenas (ahora en posición [1])
+        numero[1]++; // Incrementar decenas
     }
-    
+
     if (is_hours) {
-        // Para horas: 23 -> 00
+        // Para horas: 23 -> 00 (pero 24 nunca debe aparecer)
         if ((numero[1] == 2) && (numero[0] == 4)) {
             numero[0] = 0;
             numero[1] = 0;
         }
     } else {
-        // Para minutos: 59 -> 00
-        if ((numero[1] == limite[0]) && (numero[0] == limite[1])) {
+        // Para minutos/segundos: cuando llega a 60 -> 00
+        if ((numero[1] == 6) && (numero[0] == 0)) {
             numero[0] = 0;
             numero[1] = 0;
         }
     }
 }
 
-void DecreaseBCD(uint8_t *numero, const uint8_t limite[2]) {
+void DecreaseBCD(uint8_t * numero, const uint8_t limite[2]) {
     // Detectar si son horas por el límite
     bool is_hours = (limite[0] == 2 && limite[1] == 3);
-    
-    if (numero[0] == 0) {  // Si unidades es 0 (ahora en posición [0])
-        if (numero[1] == 0) {  // Si decenas es 0 (ahora en posición [1])
+
+    if (numero[0] == 0) {     // Si unidades es 0 (ahora en posición [0])
+        if (numero[1] == 0) { // Si decenas es 0 (ahora en posición [1])
             if (is_hours) {
                 // CASO ESPECIAL: 00:xx -> 23:xx
-                numero[1] = 2;  // decenas = 2
-                numero[0] = 3;  // unidades = 3
+                numero[1] = 2; // decenas = 2
+                numero[0] = 3; // unidades = 3
             } else {
                 // Para minutos: 00 -> 59
-                numero[1] = 5;  // decenas = 5
-                numero[0] = 9;  // unidades = 9
+                numero[1] = 5; // decenas = 5
+                numero[0] = 9; // unidades = 9
             }
         } else {
             // Decrementar decenas y poner unidades a 9
@@ -149,15 +150,16 @@ void ModeChange(clock_mode_t actual) {
 
     switch (clock_mode) {
     case CLOCK_MODE_UNSET_TIME:
-        ScreenFlashDigits(board->screen, 0, 3, 25);
-        ScreenSetDots(board->screen, 0, 0);
-        // Inicializar con tiempo por defecto
+        ScreenFlashDigits(board->screen, 0, 3, 100);
+        ScreenFlashDots(board->screen, 1, 1, 200);
         memset(&time_to_display, 0, sizeof(clock_time_t));
         break;
 
     case CLOCK_MODE_DISPLAY:
         ScreenFlashDigits(board->screen, 0, 3, 0);
-        ScreenFlashDots(board->screen, 1, 1, 250);
+        ScreenClearDots(board->screen);
+        ScreenFlashDots(board->screen, 1, 1, 100);
+        ClockUpdateAlarmVisual(clock, board, alarm_ringing);
         break;
 
     case CLOCK_MODE_SET_HOURS:
@@ -248,6 +250,7 @@ bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag) 
     return false;
 }
 
+
 /* === Public function implementation ========================================================= */
 
 /**
@@ -260,7 +263,6 @@ int main(void) {
     SysTickInit(TICKS_PER_SECOND);
     clock = ClockCreate(TICKS_PER_SECOND);
     board = BoardCreate();
-    // uint8_t value[4];
 
     ModeChange(CLOCK_MODE_UNSET_TIME);
 
@@ -280,45 +282,46 @@ int main(void) {
             break;
 
         case CLOCK_MODE_DISPLAY:
-            // Detectar si se completó una presión larga
+            // Detectar presiones largas
             if (set_time_long_press_detected) {
-                set_time_long_press_detected = false;  // Reset flag
-                ClockGetTime(clock, &time_to_display); // Obtener tiempo actual para editar
+                set_time_long_press_detected = false;
+                ClockGetTime(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_HOURS);
             } else if (set_alarm_long_press_detected) {
-                set_alarm_long_press_detected = false;  // Reset flag
-                ClockGetAlarm(clock, &time_to_display); // Obtener alarma actual para editar
+                set_alarm_long_press_detected = false;
+                ClockGetAlarm(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
             }
 
-            // Manejar activación/desactivación de alarma con presiones cortas
-            if (DigitalInputWasActivated(board->accept)) {
-                ClockEnableAlarm(clock, true);
-                DigitalOutputActivate(board->led_green);
-            }
-            if (DigitalInputWasActivated(board->cancel)) {
-                ClockEnableAlarm(clock, false);
-                DigitalOutputDeactivate(board->led_green);
-            }
+            // Actualizar estado de alarma
+            alarm_ringing = ClockCheckAlarm(clock);
 
-            // Verificar si la alarma debe sonar
-            if (ClockCheckAlarm(clock)) {
-                DigitalOutputActivate(board->buzzer);
-                DigitalOutputActivate(board->led_red);
-
+            if (alarm_ringing) {
+                // ALARMA ESTÁ SONANDO
                 if (DigitalInputWasActivated(board->accept)) {
-                    DigitalOutputDeactivate(board->buzzer);
-                    DigitalOutputDeactivate(board->led_red);
-                    ClockEnableAlarm(clock, false);
+                    ClockPostponeAlarm(clock, 5);           // Posponer 5 minutos
+                    alarm_ringing = ClockCheckAlarm(clock); // Actualizar estado
                 }
 
                 if (DigitalInputWasActivated(board->cancel)) {
-                    DigitalOutputDeactivate(board->buzzer);
-                    DigitalOutputDeactivate(board->led_red);
-                    ClockPostponeAlarm(clock, 5);
+                    ClockEnableAlarm(clock, false); // Desactivar alarma
+                    alarm_ringing = false;          // Ya no suena
+                }
+            } else {
+                // ALARMA NO ESTÁ SONANDO
+                if (DigitalInputWasActivated(board->accept)) {
+                    ClockEnableAlarm(clock, true); // Activar alarma
+                }
+
+                if (DigitalInputWasActivated(board->cancel)) {
+                    ClockEnableAlarm(clock, false); // Desactivar alarma
                 }
             }
+
+            // Actualizar estado visual
+            ClockUpdateAlarmVisual(clock, board, alarm_ringing);
             break;
+
         case CLOCK_MODE_SET_HOURS:
             if (DigitalInputWasActivated(board->increase)) {
                 IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);

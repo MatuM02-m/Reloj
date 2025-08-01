@@ -195,15 +195,17 @@ int ScreenFlashDots(screen_t self, uint8_t from, uint8_t to, uint16_t frecuency)
     return result;
 }
 
-// int ScreenTurnOffDots(screen_t self) {
-//     int result = 0;
-//     if (!self) {
-//         result = -1;
-//     } else {
-//         self->driver->DotsTurnOff();
-//     }
-//     return result;
-// }
+int ScreenClearDots(screen_t self) {
+    int result = 0;
+    if (!self) {
+        result = -1;
+    } else {
+        self->dots_on = false; // Apagar todos los puntos fijos
+        self->dots_from = 0;
+        self->dots_to = 0;
+    }
+    return result;
+}
 
 int ScreenSetDots(screen_t self, uint8_t from, uint8_t to) {
     int result = 0;

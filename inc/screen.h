@@ -133,7 +133,7 @@ int ScreenFlashDigits(screen_t screen, uint8_t from, uint8_t to, uint16_t frecue
  */
 int ScreenFlashDots(screen_t screen, uint8_t from, uint8_t to, uint16_t frecuency);
 
-// int ScreenTurnOffDots(screen_t screen, bool state);
+int ScreenClearDots(screen_t screen);
 
 int ScreenSetDots(screen_t screen, uint8_t from, uint8_t to);
 

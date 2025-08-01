@@ -88,7 +88,7 @@ bool ClockTimeIsValid(clock_time_t * self) {
     if (self->time.minutes[1] > 9) {
         return false; // Unidad de minutos no puede ser mayor a 9
     }
-    
+
     // Validar segundos: 00-59
     if (self->time.seconds[0] > 5) {
         return false; // Decena de segundos no puede ser mayor a 5
@@ -117,7 +117,7 @@ bool ClockSetTime(clock_t self, const clock_time_t * new_time) {
 
 void ClockNewTick(clock_t self) {
     self->clock_ticks++;
-    
+
     if (self->clock_ticks >= 1000) {
         self->clock_ticks = 0;
 
@@ -129,7 +129,7 @@ void ClockNewTick(clock_t self) {
             self->current_time.time.seconds[1]++;
             if (self->current_time.time.seconds[1] > 5) {
                 self->current_time.time.seconds[1] = 0;
-                
+
                 // Incrementar minutos (unidades en [0])
                 self->current_time.time.minutes[0]++;
                 if (self->current_time.time.minutes[0] > 9) {
@@ -138,7 +138,7 @@ void ClockNewTick(clock_t self) {
                     self->current_time.time.minutes[1]++;
                     if (self->current_time.time.minutes[1] > 5) {
                         self->current_time.time.minutes[1] = 0;
-                        
+
                         // Incrementar horas (unidades en [0])
                         self->current_time.time.hours[0]++;
                         if (self->current_time.time.hours[0] > 9) {
@@ -146,10 +146,9 @@ void ClockNewTick(clock_t self) {
                             // Incrementar horas (decenas en [1])
                             self->current_time.time.hours[1]++;
                         }
-                        
+
                         // Verificar límite de 24 horas: 23 (decenas=2, unidades=3) -> 00
-                        if ((self->current_time.time.hours[1] == 2) && 
-                            (self->current_time.time.hours[0] == 4)) {
+                        if ((self->current_time.time.hours[1] == 2) && (self->current_time.time.hours[0] == 4)) {
                             self->current_time.time.hours[0] = 0;
                             self->current_time.time.hours[1] = 0;
                         }
@@ -173,8 +172,12 @@ bool ClockSetAlarm(clock_t self, const clock_time_t * new_alarm_time) {
 
 bool ClockCheckAlarm(clock_t self) {
     if (self->alarm_enabled) {
-        if (memcmp(&self->current_time, &self->alarm_time, sizeof(clock_time_t)) == 0) {
-            return true; // Alarma sonó
+        // Solo comparar horas y minutos, NO segundos
+        if ((self->current_time.time.hours[0] == self->alarm_time.time.hours[0]) &&
+            (self->current_time.time.hours[1] == self->alarm_time.time.hours[1]) &&
+            (self->current_time.time.minutes[0] == self->alarm_time.time.minutes[0]) &&
+            (self->current_time.time.minutes[1] == self->alarm_time.time.minutes[1])) {
+            return true; // Alarma debe sonar
         }
     }
     return false;
@@ -182,37 +185,39 @@ bool ClockCheckAlarm(clock_t self) {
 
 bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
     if (minutes_postpone == 0) {
-        return false; // No hay nada que posponer
+        return false;
     }
-    
+
     // Copiar la hora actual de la alarma
     memcpy(&self->alarm_posponed, &self->alarm_time, sizeof(clock_time_t));
-    
-    // Convertir minutos BCD a decimal para facilitar el cálculo
-    uint8_t total_minutes = (self->alarm_posponed.time.minutes[0] * 10) + 
-                           self->alarm_posponed.time.minutes[1] + 
-                           minutes_postpone;
-    
-    uint8_t total_hours = (self->alarm_posponed.time.hours[0] * 10) + 
-                         self->alarm_posponed.time.hours[1];
-    
+
+    // CORRECCIÓN: Convertir BCD a decimal usando el mapeo correcto
+    // [0] = unidades, [1] = decenas
+    uint8_t total_minutes = (self->alarm_posponed.time.minutes[1] * 10) + // decenas
+                            self->alarm_posponed.time.minutes[0] +        // unidades
+                            minutes_postpone;
+
+    uint8_t total_hours = (self->alarm_posponed.time.hours[1] * 10) + // decenas
+                          self->alarm_posponed.time.hours[0];         // unidades
+
     // Manejar overflow de minutos
     while (total_minutes >= 60) {
         total_minutes -= 60;
         total_hours++;
     }
-    
+
     // Manejar overflow de horas (formato 24h)
     if (total_hours >= 24) {
         total_hours = total_hours % 24;
     }
-    
-    // Convertir de vuelta a BCD
-    self->alarm_posponed.time.minutes[0] = total_minutes / 10;
-    self->alarm_posponed.time.minutes[1] = total_minutes % 10;
-    self->alarm_posponed.time.hours[0] = total_hours / 10;
-    self->alarm_posponed.time.hours[1] = total_hours % 10;
-    
+
+    // CORRECCIÓN: Convertir de vuelta a BCD usando el mapeo correcto
+    // [0] = unidades, [1] = decenas
+    self->alarm_posponed.time.minutes[0] = total_minutes % 10; // unidades
+    self->alarm_posponed.time.minutes[1] = total_minutes / 10; // decenas
+    self->alarm_posponed.time.hours[0] = total_hours % 10;     // unidades
+    self->alarm_posponed.time.hours[1] = total_hours / 10;     // decenas
+
     // Establecer la nueva alarma
     ClockSetAlarm(self, &self->alarm_posponed);
     return true;
@@ -220,18 +225,52 @@ bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
 
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value) {
     value[0] = self->time.hours[1];
-    value[1] = self->time.hours[0];  
+    value[1] = self->time.hours[0];
     value[2] = self->time.minutes[1];
     value[3] = self->time.minutes[0];
 }
 
-bool ClockGetAlarm(clock_t self, clock_time_t *alarm_time) {
+bool ClockGetAlarm(clock_t self, clock_time_t * alarm_time) {
     bool result = false;
     if ((self) && (alarm_time)) {
         memcpy(alarm_time, &self->alarm_time, sizeof(clock_time_t));
         result = true;
     }
     return result;
+}
+
+bool ClockAlarmIsEnabled(clock_t self) {
+    return self->alarm_enabled;
+}
+
+void ClockUpdateAlarmVisual(clock_t self, board_t board, bool alarm_ringing) {
+    if (alarm_ringing) {
+        // Cuando está sonando: buzzer + LED rojo
+        DigitalOutputActivate(board->buzzer);
+        DigitalOutputActivate(board->led_red);
+        DigitalOutputActivate(board->led_green);
+
+        // Punto del último dígito (posición 3)
+        ScreenSetDots(board->screen, 3, 3);
+
+    } else if (self->alarm_enabled) {
+        // Cuando está activa pero no sonando: solo LED verde + punto
+        DigitalOutputDeactivate(board->buzzer);
+        DigitalOutputDeactivate(board->led_red);
+        DigitalOutputActivate(board->led_green);
+
+        // Solo punto del último dígito (posición 3)
+        ScreenSetDots(board->screen, 3, 3);
+
+    } else {
+        // Cuando está desactivada: todo apagado
+        DigitalOutputDeactivate(board->buzzer);
+        DigitalOutputDeactivate(board->led_red);
+        DigitalOutputDeactivate(board->led_green);
+
+        // Apagar todos los puntos fijos
+        ScreenClearDots(board->screen);
+    }
 }
 
 /* === End of documentation ======================================================================================== */
