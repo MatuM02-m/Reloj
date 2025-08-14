@@ -130,6 +130,12 @@ bool ClockCheckAlarm(clock_t clock);
 bool ClockPostponeAlarm(clock_t clock, uint16_t minutes);
 
 /**
+ * @brief           Detiene manualmente la alarma que está sonando.
+ * @param clock     El reloj cuya alarma se quiere detener.
+ */
+void ClockStopAlarm(clock_t clock);
+
+/**
  * @brief           Convierte el tiempo del reloj a formato BCD.
  * @param self      Puntero al tiempo del reloj a convertir.
  * @param value     Puntero al array donde se almacenará el valor BCD.

@@ -213,7 +213,7 @@ void ModeChange(clock_mode_t actual) {
     case CLOCK_MODE_DISPLAY:
         ScreenFlashDigits(board->screen, 0, 3, 0);
         ScreenFlashDots(board->screen, 1, 1, 500);
-        // ClockUpdateAlarmVisual(clock, board, alarm_ringing);
+        ClockUpdateAlarmVisual(clock, board, alarm_ringing);
         break;
 
     case CLOCK_MODE_SET_HOURS:
@@ -366,10 +366,12 @@ int main(void) {
                 // ALARMA ESTÁ SONANDO
                 if (DigitalInputWasActivated(board->accept)) {
                     ClockPostponeAlarm(clock, 5);           // Posponer 5 minutos
+                    // ClockStopAlarm(clock);
                     alarm_ringing = ClockCheckAlarm(clock); // Actualizar estado
                 }
 
                 if (DigitalInputWasActivated(board->cancel)) {
+                    ClockStopAlarm(clock);
                     ClockEnableAlarm(clock, false); // Desactivar alarma
                     alarm_ringing = false;          // Ya no suena
                 }

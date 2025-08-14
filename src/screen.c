@@ -136,7 +136,6 @@ void ScreenRefresh(screen_t self) {
     // Incrementar contador global en cada llamada
     global_flash_counter++;
     
-    // Manejo de parpadeo de dígitos (sin cambios)
     if (self->flashing_frecuency) {
         if (self->current_digit == 0) {
             self->flashing_count = (self->flashing_count + 1) % (self->flashing_frecuency);
@@ -148,21 +147,17 @@ void ScreenRefresh(screen_t self) {
         }
     }
 
-    // CORREGIDO: Manejo de parpadeo de puntos
     bool show_dot = false;
     
-    // 1. Puntos fijos
     if (self->dots_on && (self->current_digit >= self->dots_from) && (self->current_digit <= self->dots_to)) {
         show_dot = true;
     }
     
-    // 2. Parpadeo de puntos (CORREGIDO)
     bool current_digit_dot_flashing = (self->dots_flashing_frecuency > 0) && 
                                      (self->current_digit >= self->dots_flashing_from) &&
                                      (self->current_digit <= self->dots_flashing_to);
     
     if (current_digit_dot_flashing) {
-        // CORRECCIÓN: Usar contador global para el parpadeo
         uint32_t flash_cycle = (global_flash_counter / self->dots_flashing_frecuency) % 2;
         
         if (flash_cycle == 0) {
@@ -172,7 +167,6 @@ void ScreenRefresh(screen_t self) {
         }
     }
     
-    // 3. Aplicar el punto
     if (show_dot) {
         segments |= SEGMENT_P;
     } else {

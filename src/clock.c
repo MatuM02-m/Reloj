@@ -39,6 +39,7 @@ SPDX-License-Identifier: MIT
  * @param alarm_posponed    Hora de la alarma pospuesta.
  * @param alarm_enabled     Indica si la alarma está habilitada.
  * @param valid             Indica si el reloj tiene un tiempo válido.
+ * @param alarm_ringing     Indica si la alarma está sonando.
  *
  */
 struct clock_s {
@@ -48,6 +49,7 @@ struct clock_s {
     clock_time_t alarm_posponed;
     bool alarm_enabled;
     bool valid;
+    bool alarm_ringing;
 };
 
 /* === Private function declarations =============================================================================== */
@@ -65,6 +67,7 @@ clock_t ClockCreate(uint16_t ticks_per_seconds) {
     memset(self, 0, sizeof(struct clock_s));
     self->valid = false;
     self->alarm_enabled = false;
+    self->alarm_ringing = false;
     self->clock_ticks = ticks_per_seconds;
     return self;
 }
@@ -161,6 +164,9 @@ void ClockNewTick(clock_t self) {
 
 bool ClockEnableAlarm(clock_t self, bool enable) {
     self->alarm_enabled = enable;
+    if(!enable) {
+        self->alarm_ringing = false; // Si desactivamos la alarma, también deja de sonar
+    }
     return self->alarm_enabled;
 }
 
@@ -172,10 +178,14 @@ bool ClockSetAlarm(clock_t self, const clock_time_t * new_alarm_time) {
 
 bool ClockCheckAlarm(clock_t self) {
     if (self->alarm_enabled) {
-        if ((self->current_time.time.hours[0] == self->alarm_time.time.hours[0]) &&
+        if (self->alarm_ringing) {
+            return true; // Alarma ya está sonando
+        }
+        else if ((self->current_time.time.hours[0] == self->alarm_time.time.hours[0]) &&
             (self->current_time.time.hours[1] == self->alarm_time.time.hours[1]) &&
             (self->current_time.time.minutes[0] == self->alarm_time.time.minutes[0]) &&
             (self->current_time.time.minutes[1] == self->alarm_time.time.minutes[1])) {
+            self->alarm_ringing = true; // Alarma debe sonar
             return true; // Alarma debe sonar
         }
     }
@@ -215,6 +225,12 @@ bool ClockPostponeAlarm(clock_t self, uint16_t minutes_postpone) {
     return true;
 }
 
+void ClockStopAlarm(clock_t self) {
+    if (self){
+        self->alarm_ringing = false; // Detener la alarma
+    }
+}
+
 void ClockTimeToBCD(clock_time_t * self, uint8_t * value) {
     value[0] = self->time.hours[1];
     value[1] = self->time.hours[0];
@@ -237,6 +253,9 @@ bool ClockAlarmIsEnabled(clock_t self) {
 
 void ClockUpdateAlarmVisual(clock_t self, board_t board, bool alarm_ringing) {
     if (alarm_ringing) {
+
+        ScreenFlashDigits(board->screen, 0, 3, 0);
+
         DigitalOutputActivate(board->buzzer);
         DigitalOutputActivate(board->led_red);
         ScreenSetDots(board->screen, 3, 3);
