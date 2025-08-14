@@ -237,28 +237,16 @@ bool ClockAlarmIsEnabled(clock_t self) {
 
 void ClockUpdateAlarmVisual(clock_t self, board_t board, bool alarm_ringing) {
     if (alarm_ringing) {
-        // Cuando está sonando: buzzer + LED rojo
         DigitalOutputActivate(board->buzzer);
         DigitalOutputActivate(board->led_red);
-        DigitalOutputActivate(board->led_green);
-
-        // Punto del último dígito (posición 3)
         ScreenSetDots(board->screen, 3, 3);
-
     } else if (self->alarm_enabled) {
-        // Cuando está activa pero no sonando: solo LED verde + punto
         DigitalOutputDeactivate(board->buzzer);
         DigitalOutputDeactivate(board->led_red);
-        DigitalOutputActivate(board->led_green);
-
         ScreenSetDots(board->screen, 3, 3);
-
     } else {
-        // Cuando está desactivada: todo apagado
         DigitalOutputDeactivate(board->buzzer);
         DigitalOutputDeactivate(board->led_red);
-        DigitalOutputDeactivate(board->led_green);
-
         ScreenClearDots(board->screen);
     }
 }

@@ -32,21 +32,21 @@ SPDX-License-Identifier: MIT
 
 /* === Macros definitions ====================================================================== */
 
-#define TICKS_PER_SECOND 1000
+#define TICKS_PER_SECOND           1000
 
 #define LONG_PRESS_THRESHOLD_TICKS (3 * TICKS_PER_SECOND)
 
-#define CONFIG_TIMEOUT_TICKS (30 * TICKS_PER_SECOND)
+#define CONFIG_TIMEOUT_TICKS       (30 * TICKS_PER_SECOND)
 
 /* === Private data type declarations ========================================================== */
 
 typedef enum {
-    CLOCK_MODE_UNSET_TIME,          // Modo para establecer la hora inicial
-    CLOCK_MODE_DISPLAY,             // Modo de visualización normal
-    CLOCK_MODE_SET_HOURS,           // Modo para establecer horas
-    CLOCK_MODE_SET_MINUTES,         // Modo para establecer minutos
-    CLOCK_MODE_SET_ALARM_HOURS,     // Modo para establecer horas de la alarma
-    CLOCK_MODE_SET_ALARM_MINUTES,   // Modo para establecer minutos de la alarma
+    CLOCK_MODE_UNSET_TIME,        // Modo para establecer la hora inicial
+    CLOCK_MODE_DISPLAY,           // Modo de visualización normal
+    CLOCK_MODE_SET_HOURS,         // Modo para establecer horas
+    CLOCK_MODE_SET_MINUTES,       // Modo para establecer minutos
+    CLOCK_MODE_SET_ALARM_HOURS,   // Modo para establecer horas de la alarma
+    CLOCK_MODE_SET_ALARM_MINUTES, // Modo para establecer minutos de la alarma
 } clock_mode_t;
 
 /* === Private variable declarations =========================================================== */
@@ -85,7 +85,7 @@ static uint32_t timeout_count = 0;
 
 /**
  * @brief Función para incrementar un número BCD (Binary-Coded Decimal) con límite.
- * 
+ *
  * @param numero Puntero al número BCD a incrementar.
  * @param limite Valor límite para el número BCD, representado como un arreglo de dos elementos:
  *              - limite[0]: decena (0-2 para horas, 0-5 para minutos/segundos)
@@ -95,9 +95,9 @@ void IncreaseBCD(uint8_t * numero, const uint8_t limite[2]);
 
 /**
  * @brief Función para decrementar un número BCD (Binary-Coded Decimal) con límite.
- * 
+ *
  * @param numero Puntero al número BCD a decrementar.
- * @param limite Valor límite para el número BCD, representado como un arreglo de dos elementos: 
+ * @param limite Valor límite para el número BCD, representado como un arreglo de dos elementos:
  *              - limite[0]: decena (0-2 para horas, 0-5 para minutos/segundos)
  *              - limite[1]: unidad (0-3 para horas, 0-9 para minutos/segundos)
  */
@@ -105,21 +105,21 @@ void DecreaseBCD(uint8_t * numero, const uint8_t limite[2]);
 
 /**
  * @brief Cambia el modo del reloj y actualiza la pantalla según el nuevo modo.
- * 
+ *
  * @param mode Nuevo modo del reloj.
  */
 void ModeChange(clock_mode_t mode);
 
 /**
  * @brief Actualiza el contenido de la pantalla según el modo actual del reloj.
- * 
+ *
  * Esta función escribe los valores BCD correspondientes en la pantalla según el modo actual.
  */
 void UpdateDisplayContent(void);
 
 /**
  * @brief Verifica si una entrada digital ha sido presionada durante un tiempo largo.
- * 
+ *
  * @param input Entrada digital a verificar.
  * @param press_duration Puntero al contador de duración de la presión.
  * @param flag Puntero a un flag que indica si se ha detectado una presión larga.
@@ -130,18 +130,19 @@ bool IsLongPress(digital_input_t input, uint32_t * press_duration, bool * flag);
 
 /**
  * @brief Reinicia el contador de tiempo de configuración.
- * 
+ *
  * Esta función se utiliza para reiniciar el contador que controla el tiempo de configuración del reloj.
  */
 void ResetConfigTimeout(void);
 
 /**
  * @brief Verifica si el reloj está en modo de configuración.
- * 
+ *
  * @return true Si el reloj está en modo de configuración.
  * @return false Si el reloj no está en modo de configuración.
  */
 bool IsInConfigMode(void);
+
 
 /* === Public variable definitions ============================================================= */
 
@@ -211,9 +212,8 @@ void ModeChange(clock_mode_t actual) {
 
     case CLOCK_MODE_DISPLAY:
         ScreenFlashDigits(board->screen, 0, 3, 0);
-        ScreenClearDots(board->screen);
-        ScreenFlashDots(board->screen, 1, 1, 100);
-        ClockUpdateAlarmVisual(clock, board, alarm_ringing);
+        ScreenFlashDots(board->screen, 1, 1, 500);
+        // ClockUpdateAlarmVisual(clock, board, alarm_ringing);
         break;
 
     case CLOCK_MODE_SET_HOURS:
@@ -227,11 +227,15 @@ void ModeChange(clock_mode_t actual) {
         break;
 
     case CLOCK_MODE_SET_ALARM_HOURS:
+        ScreenFlashDots(board->screen, 0, 0, 0);
+        ScreenClearDots(board->screen);
         ScreenSetDots(board->screen, 0, 3); // Todos los puntos para indicar modo alarma
         ScreenFlashDigits(board->screen, 0, 1, 100);
         break;
 
     case CLOCK_MODE_SET_ALARM_MINUTES:
+        ScreenFlashDots(board->screen, 0, 0, 0);
+        ScreenClearDots(board->screen);
         ScreenSetDots(board->screen, 0, 3); // Todos los puntos para indicar modo alarma
         ScreenFlashDigits(board->screen, 2, 3, 100);
         break;
@@ -399,7 +403,13 @@ int main(void) {
                 ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
-                ModeChange(CLOCK_MODE_UNSET_TIME);
+
+                clock_time_t current_time;
+                if (ClockGetTime(clock, &current_time)) {
+                    ModeChange(CLOCK_MODE_DISPLAY); // Volver a mostrar hora actual
+                } else {
+                    ModeChange(CLOCK_MODE_UNSET_TIME); // Volver a estado sin configurar
+                }
             }
             break;
 
@@ -418,7 +428,13 @@ int main(void) {
                 ModeChange(CLOCK_MODE_SET_HOURS);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
-                ModeChange(CLOCK_MODE_UNSET_TIME);
+
+                clock_time_t current_time;
+                if (ClockGetTime(clock, &current_time)) {
+                    ModeChange(CLOCK_MODE_DISPLAY); // Volver a mostrar hora actual
+                } else {
+                    ModeChange(CLOCK_MODE_UNSET_TIME); // Volver a estado sin configurar
+                }
             }
             break;
 
@@ -494,10 +510,16 @@ void SysTick_Handler(void) {
         timeout_count++;
         if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
             timeout_count = 0;
-            ModeChange(CLOCK_MODE_UNSET_TIME); // Cancelar configuración
+
+            clock_time_t current_time;
+            if (ClockGetTime(clock, &current_time)) {
+                // Tiene hora válida, volver a mostrarla
+                ModeChange(CLOCK_MODE_DISPLAY);
+            } else {
+                // No tiene hora válida, mantener estado sin configurar
+                ModeChange(CLOCK_MODE_UNSET_TIME);
+            }
         }
-    } else {
-        timeout_count = 0; // Resetear cuando no está en configuración
     }
 
     // Solo actualizar la pantalla cuando estamos en modo DISPLAY
@@ -506,13 +528,6 @@ void SysTick_Handler(void) {
         ClockGetTime(clock, &time);
         ClockTimeToBCD(&time, value);
         ScreenWriteBCD(board->screen, value, 4);
-    }
-
-    // Controlar el parpadeo del separador cada 500ms
-    if ((count % 500) == 0) {
-        if (clock_mode == CLOCK_MODE_DISPLAY) {
-            ScreenFlashDots(board->screen, 1, 1, 1000);
-        }
     }
 }
 

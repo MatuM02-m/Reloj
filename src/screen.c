@@ -125,40 +125,60 @@ void ScreenWriteBCD(screen_t self, uint8_t value[], uint8_t size) {
 }
 
 void ScreenRefresh(screen_t self) {
+    static uint32_t global_flash_counter = 0;  // Contador global
     uint8_t segments;
+    
     self->driver->DigitsTurnOff();
-    // self->driver->DottTurnOff();
     self->current_digit = (self->current_digit + 1) % self->digits;
 
     segments = self->values[self->current_digit];
+    
+    // Incrementar contador global en cada llamada
+    global_flash_counter++;
+    
+    // Manejo de parpadeo de dígitos (sin cambios)
     if (self->flashing_frecuency) {
         if (self->current_digit == 0) {
             self->flashing_count = (self->flashing_count + 1) % (self->flashing_frecuency);
         }
         if (self->flashing_count < (self->flashing_frecuency / 2)) {
             if ((self->current_digit >= self->flashing_from) && (self->current_digit <= self->flashing_to)) {
-                segments = 0; // Apagar segmentos durante el parpadeo
+                segments = 0;
             }
         }
     }
 
-    bool current_digit_dot = (self->dots_flashing_frecuency > 0) && (self->current_digit >= self->dots_flashing_from) &&
-                             (self->current_digit <= self->dots_flashing_to);
-    if (current_digit_dot) {
-        if (self->current_digit == 0) {
-            self->dots_flashing_count = (self->dots_flashing_count + 1) % (self->dots_flashing_frecuency);
-        }
-
-        if (self->dots_flashing_count >= (self->dots_flashing_frecuency / 2)) {
-            segments &= ~SEGMENT_P; // Apagar el punto decimal durante el parpadeo
+    // CORREGIDO: Manejo de parpadeo de puntos
+    bool show_dot = false;
+    
+    // 1. Puntos fijos
+    if (self->dots_on && (self->current_digit >= self->dots_from) && (self->current_digit <= self->dots_to)) {
+        show_dot = true;
+    }
+    
+    // 2. Parpadeo de puntos (CORREGIDO)
+    bool current_digit_dot_flashing = (self->dots_flashing_frecuency > 0) && 
+                                     (self->current_digit >= self->dots_flashing_from) &&
+                                     (self->current_digit <= self->dots_flashing_to);
+    
+    if (current_digit_dot_flashing) {
+        // CORRECCIÓN: Usar contador global para el parpadeo
+        uint32_t flash_cycle = (global_flash_counter / self->dots_flashing_frecuency) % 2;
+        
+        if (flash_cycle == 0) {
+            show_dot = true;   // Primera mitad del ciclo: encendido
         } else {
-            segments |= SEGMENT_P; // Encender el punto decimal
-        }
-    } else {
-        if (self->dots_on && (self->current_digit >= self->dots_from) && (self->current_digit <= self->dots_to)) {
-            segments |= SEGMENT_P; // Encender el punto decimal si está configurado
+            show_dot = false;  // Segunda mitad del ciclo: apagado
         }
     }
+    
+    // 3. Aplicar el punto
+    if (show_dot) {
+        segments |= SEGMENT_P;
+    } else {
+        segments &= ~SEGMENT_P;
+    }
+    
     self->driver->SegmentsUpdate(segments);
     self->driver->DigitsTurnOn(self->current_digit);
 }
