@@ -25,18 +25,13 @@ SPDX-License-Identifier: MIT
 
 /* === Headers files inclusions =============================================================== */
 
+#include "config.h"
 #include "digital.h"
 #include "bsp.h"
 #include "clock.h"
 #include "screen.h"
 
 /* === Macros definitions ====================================================================== */
-
-#define TICKS_PER_SECOND           1000
-
-#define LONG_PRESS_THRESHOLD_TICKS (3 * TICKS_PER_SECOND)
-
-#define CONFIG_TIMEOUT_TICKS       (30 * TICKS_PER_SECOND)
 
 /* === Private data type declarations ========================================================== */
 
