@@ -147,6 +147,24 @@ bool IsInConfigMode(void);
  */
 static void MainTask(void * pvParameters);
 
+/**
+ * @brief Tarea para el manejo del display multiplexado
+ * @param pvParameters Parámetros de la tarea (no utilizados)
+ */
+static void DisplayTask(void * pvParameters);
+
+/**
+ * @brief Tarea para el manejo del reloj y timeouts
+ * @param pvParameters Parámetros de la tarea (no utilizados)
+ */
+static void ClockTask(void * pvParameters);
+
+/**
+ * @brief Tarea para el manejo de botones y presiones largas
+ * @param pvParameters Parámetros de la tarea (no utilizados)
+ */
+static void ButtonTask(void * pvParameters);
+
 /* === Public variable definitions ============================================================= */
 
 /* === Private variable definitions ============================================================ */
@@ -328,26 +346,117 @@ bool IsInConfigMode(void) {
  * @return int
  */
 int main(void) {
-    // Mantener las inicializaciones
-    SysTickInit(TICKS_PER_SECOND);         
+    
+    SysTickInit(TICKS_PER_SECOND);
     clock = ClockCreate(TICKS_PER_SECOND); 
     board = BoardCreate();                 
     ModeChange(CLOCK_MODE_UNSET_TIME);
 
-    // Crear la tarea principal
-    xTaskCreate(MainTask,           // Función de la tarea
-                "MainTask",         // Nombre de la tarea
-                256,                // Tamaño del stack (en words)
-                NULL,               // Parámetros (ninguno)
-                1,                  // Prioridad (baja)
-                NULL);              // Handle de la tarea (no necesario)
+    // Crear todas las tareas
+    xTaskCreate(DisplayTask,        // Tarea de display (alta prioridad)
+                "Display",
+                128,                // Stack pequeño
+                NULL,
+                3,                  // Prioridad alta
+                NULL);
+
+    xTaskCreate(ClockTask,          // Tarea de reloj
+                "Clock",
+                256,
+                NULL,
+                2,                  // Prioridad media
+                NULL);
+
+    xTaskCreate(ButtonTask,         // Tarea de botones
+                "Buttons",
+                128,
+                NULL,
+                2,                  // Prioridad media
+                NULL);
+
+    xTaskCreate(MainTask,           // Tarea principal (lógica)
+                "MainTask",
+                512,                // Stack más grande para lógica
+                NULL,
+                1,                  // Prioridad baja
+                NULL);
     
     // Iniciar el scheduler de FreeRTOS
     vTaskStartScheduler();
     
-    // Si llegamos aquí, algo salió mal con FreeRTOS
-    while(1) {
-        // Loop infinito de error
+    // Si llegamos aquí, algo salió mal
+    while(1);
+}
+
+static void DisplayTask(void * pvParameters) {
+    (void)pvParameters;
+    
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    
+    while (true) {
+        // Refrescar pantalla cada 1ms (1000 Hz para multiplexado suave)
+        ScreenRefresh(board->screen);
+        
+        // Esperar 1ms usando FreeRTOS delay
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+    }
+}
+
+static void ClockTask(void * pvParameters) {
+    (void)pvParameters;
+    
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    uint32_t count = 0;
+    
+    while (true) {
+        // Incrementar el reloj cada segundo
+        ClockNewTick(clock);
+        count++;
+        
+        // Verificar timeout de configuración
+        if (IsInConfigMode()) {
+            timeout_count++;
+            if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
+                timeout_count = 0;
+                
+                clock_time_t current_time;
+                if (ClockGetTime(clock, &current_time)) {
+                    ModeChange(CLOCK_MODE_DISPLAY);
+                } else {
+                    ModeChange(CLOCK_MODE_UNSET_TIME);
+                }
+            }
+        }
+        
+        // Actualizar pantalla cada 100ms cuando estamos en modo DISPLAY
+        if (clock_mode == CLOCK_MODE_DISPLAY && (count % 100) == 0) {
+            uint8_t value[4];
+            ClockGetTime(clock, &time);
+            ClockTimeToBCD(&time, value);
+            ScreenWriteBCD(board->screen, value, 4);
+        }
+        
+        // Esperar 1ms (para simular los 1000 ticks por segundo originales)
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
+    }
+}
+
+static void ButtonTask(void * pvParameters) {
+    (void)pvParameters;
+    
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    
+    while (true) {
+        // Detectar presiones largas y activar flags
+        if (IsLongPress(board->set_time, &set_time_press_duration, &set_time_long_pressed)) {
+            set_time_long_press_detected = true;
+        }
+        if (IsLongPress(board->set_alarm, &set_alarm_press_duration, &set_alarm_long_pressed)) {
+            set_alarm_long_press_detected = true;
+        }
+        
+        // Verificar botones cada 1ms para detectar presiones rápidas
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
 }
 
@@ -501,50 +610,6 @@ static void MainTask(void * pvParameters) {
     }
 
     vTaskDelete(NULL);
-}
-
-void SysTick_Handler(void) {
-    static uint32_t count = 0;
-
-    // Siempre refrescar la pantalla (multiplexado)
-    ScreenRefresh(board->screen);
-
-    // Incrementar el reloj
-    ClockNewTick(clock);
-
-    // Detectar presiones largas y activar flags
-    if (IsLongPress(board->set_time, &set_time_press_duration, &set_time_long_pressed)) {
-        set_time_long_press_detected = true;
-    }
-    if (IsLongPress(board->set_alarm, &set_alarm_press_duration, &set_alarm_long_pressed)) {
-        set_alarm_long_press_detected = true;
-    }
-
-    count++;
-
-    if (IsInConfigMode()) {
-        timeout_count++;
-        if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
-            timeout_count = 0;
-
-            clock_time_t current_time;
-            if (ClockGetTime(clock, &current_time)) {
-                // Tiene hora válida, volver a mostrarla
-                ModeChange(CLOCK_MODE_DISPLAY);
-            } else {
-                // No tiene hora válida, mantener estado sin configurar
-                ModeChange(CLOCK_MODE_UNSET_TIME);
-            }
-        }
-    }
-
-    // Solo actualizar la pantalla cuando estamos en modo DISPLAY
-    if (clock_mode == CLOCK_MODE_DISPLAY && (count % 100) == 0) {
-        uint8_t value[4];
-        ClockGetTime(clock, &time);
-        ClockTimeToBCD(&time, value);
-        ScreenWriteBCD(board->screen, value, 4);
-    }
 }
 
 /* === End of documentation ==================================================================== */
