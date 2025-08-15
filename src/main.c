@@ -31,6 +31,9 @@ SPDX-License-Identifier: MIT
 #include "clock.h"
 #include "screen.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 /* === Macros definitions ====================================================================== */
 
 /* === Private data type declarations ========================================================== */
@@ -138,6 +141,11 @@ void ResetConfigTimeout(void);
  */
 bool IsInConfigMode(void);
 
+/**
+ * @brief Tarea principal que maneja la lógica del reloj
+ * @param pvParameters Parámetros de la tarea (no utilizados)
+ */
+static void MainTask(void * pvParameters);
 
 /* === Public variable definitions ============================================================= */
 
@@ -320,30 +328,48 @@ bool IsInConfigMode(void) {
  * @return int
  */
 int main(void) {
+    // Mantener las inicializaciones
+    SysTickInit(TICKS_PER_SECOND);         
+    clock = ClockCreate(TICKS_PER_SECOND); 
+    board = BoardCreate();                 
+    ModeChange(CLOCK_MODE_UNSET_TIME);
 
-    SysTickInit(TICKS_PER_SECOND);         // Inicializar timer del sistema
-    clock = ClockCreate(TICKS_PER_SECOND); // Crear el reloj
-    board = BoardCreate();                 // Inicializar la placa
+    // Crear la tarea principal
+    xTaskCreate(MainTask,           // Función de la tarea
+                "MainTask",         // Nombre de la tarea
+                256,                // Tamaño del stack (en words)
+                NULL,               // Parámetros (ninguno)
+                1,                  // Prioridad (baja)
+                NULL);              // Handle de la tarea (no necesario)
+    
+    // Iniciar el scheduler de FreeRTOS
+    vTaskStartScheduler();
+    
+    // Si llegamos aquí, algo salió mal con FreeRTOS
+    while(1) {
+        // Loop infinito de error
+    }
+}
 
-    ModeChange(CLOCK_MODE_UNSET_TIME); // Cambiar al modo de configuración inicial
+static void MainTask(void * pvParameters) {
+    // Eliminar el parámetro no utilizado
+    (void)pvParameters;
 
     while (true) {
         switch (clock_mode) {
         case CLOCK_MODE_UNSET_TIME:
-            // Detectar si se completó una presión larga
             if (set_time_long_press_detected) {
-                set_time_long_press_detected = false;  // Reset flag
-                ClockGetTime(clock, &time_to_display); // Obtener tiempo actual
+                set_time_long_press_detected = false;
+                ClockGetTime(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_MINUTES);
             } else if (set_alarm_long_press_detected) {
-                set_alarm_long_press_detected = false;  // Reset flag
-                ClockGetAlarm(clock, &time_to_display); // Obtener alarma actual
+                set_alarm_long_press_detected = false;
+                ClockGetAlarm(clock, &time_to_display);
                 ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
             }
             break;
 
         case CLOCK_MODE_DISPLAY:
-            // Detectar presiones largas
             if (set_time_long_press_detected) {
                 set_time_long_press_detected = false;
                 ClockGetTime(clock, &time_to_display);
@@ -354,34 +380,26 @@ int main(void) {
                 ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
             }
 
-            // Actualizar estado de alarma
             alarm_ringing = ClockCheckAlarm(clock);
 
             if (alarm_ringing) {
-                // ALARMA ESTÁ SONANDO
                 if (DigitalInputWasActivated(board->accept)) {
-                    ClockPostponeAlarm(clock, 5);           // Posponer 5 minutos
-                    // ClockStopAlarm(clock);
-                    alarm_ringing = ClockCheckAlarm(clock); // Actualizar estado
+                    ClockPostponeAlarm(clock, 5);
+                    alarm_ringing = ClockCheckAlarm(clock);
                 }
-
                 if (DigitalInputWasActivated(board->cancel)) {
                     ClockStopAlarm(clock);
-                    ClockEnableAlarm(clock, false); // Desactivar alarma
-                    alarm_ringing = false;          // Ya no suena
+                    ClockEnableAlarm(clock, false);
+                    alarm_ringing = false;
                 }
             } else {
-                // ALARMA NO ESTÁ SONANDO
                 if (DigitalInputWasActivated(board->accept)) {
-                    ClockEnableAlarm(clock, true); // Activar alarma
+                    ClockEnableAlarm(clock, true);
                 }
-
                 if (DigitalInputWasActivated(board->cancel)) {
-                    ClockEnableAlarm(clock, false); // Desactivar alarma
+                    ClockEnableAlarm(clock, false);
                 }
             }
-
-            // Actualizar estado visual
             ClockUpdateAlarmVisual(clock, board, alarm_ringing);
             break;
 
@@ -400,12 +418,11 @@ int main(void) {
                 ModeChange(CLOCK_MODE_DISPLAY);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
-
                 clock_time_t current_time;
                 if (ClockGetTime(clock, &current_time)) {
-                    ModeChange(CLOCK_MODE_DISPLAY); // Volver a mostrar hora actual
+                    ModeChange(CLOCK_MODE_DISPLAY);
                 } else {
-                    ModeChange(CLOCK_MODE_UNSET_TIME); // Volver a estado sin configurar
+                    ModeChange(CLOCK_MODE_UNSET_TIME);
                 }
             }
             break;
@@ -425,12 +442,11 @@ int main(void) {
                 ModeChange(CLOCK_MODE_SET_HOURS);
             } else if (DigitalInputWasActivated(board->cancel)) {
                 ResetConfigTimeout();
-
                 clock_time_t current_time;
                 if (ClockGetTime(clock, &current_time)) {
-                    ModeChange(CLOCK_MODE_DISPLAY); // Volver a mostrar hora actual
+                    ModeChange(CLOCK_MODE_DISPLAY);
                 } else {
-                    ModeChange(CLOCK_MODE_UNSET_TIME); // Volver a estado sin configurar
+                    ModeChange(CLOCK_MODE_UNSET_TIME);
                 }
             }
             break;
@@ -478,10 +494,13 @@ int main(void) {
             break;
         }
 
+        // Mantener el delay por ahora
         for (int delay = 0; delay < 25000; delay++) {
             __asm("NOP");
         }
     }
+
+    vTaskDelete(NULL);
 }
 
 void SysTick_Handler(void) {
