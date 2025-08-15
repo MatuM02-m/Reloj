@@ -33,6 +33,7 @@ SPDX-License-Identifier: MIT
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 /* === Macros definitions ====================================================================== */
 
@@ -47,13 +48,30 @@ typedef enum {
     CLOCK_MODE_SET_ALARM_MINUTES, // Modo para establecer minutos de la alarma
 } clock_mode_t;
 
+typedef enum {
+    MSG_BUTTON_SET_TIME_LONG,
+    MSG_BUTTON_SET_ALARM_LONG,
+    MSG_BUTTON_ACCEPT,
+    MSG_BUTTON_CANCEL,
+    MSG_BUTTON_INCREASE,
+    MSG_BUTTON_DECREASE,
+    MSG_CLOCK_TICK,
+    MSG_CONFIG_TIMEOUT,
+    MSG_UPDATE_DISPLAY
+} message_type_t;
+
+typedef struct {
+    message_type_t type;
+    uint32_t data; // Datos adicionales si son necesarios
+} task_message_t;
+
 /* === Private variable declarations =========================================================== */
 
 static board_t board;
 
 static clock_t clock;
 
-static clock_time_t time;
+// static clock_time_t time;
 
 static clock_time_t time_to_display;
 
@@ -71,13 +89,19 @@ static uint32_t set_alarm_press_duration = 0;
 
 static bool set_alarm_long_pressed = false;
 
-static bool set_time_long_press_detected = false;
+// static bool set_time_long_press_detected = false;
 
-static bool set_alarm_long_press_detected = false;
+// static bool set_alarm_long_press_detected = false;
 
 static bool alarm_ringing = false;
 
 static uint32_t timeout_count = 0;
+
+static QueueHandle_t main_queue; // Cola para MainTask
+
+static QueueHandle_t display_queue; // Cola para DisplayTask
+
+static QueueHandle_t clock_queue; // Cola para ClockTask
 
 /* === Private function declarations =========================================================== */
 
@@ -346,116 +370,177 @@ bool IsInConfigMode(void) {
  * @return int
  */
 int main(void) {
-    
+
     SysTickInit(TICKS_PER_SECOND);
-    clock = ClockCreate(TICKS_PER_SECOND); 
-    board = BoardCreate();                 
+    clock = ClockCreate(TICKS_PER_SECOND);
+    board = BoardCreate();
     ModeChange(CLOCK_MODE_UNSET_TIME);
 
+    main_queue = xQueueCreate(10, sizeof(task_message_t));
+    display_queue = xQueueCreate(5, sizeof(task_message_t));
+    clock_queue = xQueueCreate(5, sizeof(task_message_t));
+
+    if (main_queue == NULL || display_queue == NULL || clock_queue == NULL) {
+        // Error: no se pudieron crear las colas
+        while (1);
+    }
+
     // Crear todas las tareas
-    xTaskCreate(DisplayTask,        // Tarea de display (alta prioridad)
+    xTaskCreate(DisplayTask, // Tarea de display (alta prioridad)
                 "Display",
-                128,                // Stack pequeño
+                128, // Stack pequeño
                 NULL,
-                3,                  // Prioridad alta
+                3, // Prioridad alta
                 NULL);
 
-    xTaskCreate(ClockTask,          // Tarea de reloj
-                "Clock",
-                256,
-                NULL,
-                2,                  // Prioridad media
+    xTaskCreate(ClockTask, // Tarea de reloj
+                "Clock", 256, NULL,
+                2, // Prioridad media
                 NULL);
 
-    xTaskCreate(ButtonTask,         // Tarea de botones
-                "Buttons",
-                128,
-                NULL,
-                2,                  // Prioridad media
+    xTaskCreate(ButtonTask, // Tarea de botones
+                "Buttons", 128, NULL,
+                2, // Prioridad media
                 NULL);
 
-    xTaskCreate(MainTask,           // Tarea principal (lógica)
+    xTaskCreate(MainTask, // Tarea principal (lógica)
                 "MainTask",
-                512,                // Stack más grande para lógica
+                512, // Stack más grande para lógica
                 NULL,
-                1,                  // Prioridad baja
+                1, // Prioridad baja
                 NULL);
-    
+
     // Iniciar el scheduler de FreeRTOS
     vTaskStartScheduler();
-    
+
     // Si llegamos aquí, algo salió mal
-    while(1);
+    while (1);
 }
 
 static void DisplayTask(void * pvParameters) {
     (void)pvParameters;
-    
+
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    
+    task_message_t message;
+
     while (true) {
-        // Refrescar pantalla cada 1ms (1000 Hz para multiplexado suave)
+        // Siempre refrescar pantalla para multiplexado
         ScreenRefresh(board->screen);
-        
-        // Esperar 1ms usando FreeRTOS delay
+
+        // Verificar si hay mensajes (sin esperar)
+        if (xQueueReceive(display_queue, &message, 0) == pdTRUE) {
+            switch (message.type) {
+            case MSG_UPDATE_DISPLAY:
+                // Actualizar contenido del display en modo normal
+                if (clock_mode == CLOCK_MODE_DISPLAY) {
+                    uint8_t value[4];
+                    clock_time_t current_time;
+                    ClockGetTime(clock, &current_time);
+                    ClockTimeToBCD(&current_time, value);
+                    ScreenWriteBCD(board->screen, value, 4);
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+
+        // Refrescar cada 1ms para multiplexado suave
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
 }
 
 static void ClockTask(void * pvParameters) {
     (void)pvParameters;
-    
+
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint32_t count = 0;
-    
+    task_message_t message;
+
     while (true) {
-        // Incrementar el reloj cada segundo
+        // Incrementar el reloj cada segundo (1000 ticks de 1ms)
         ClockNewTick(clock);
         count++;
-        
+
         // Verificar timeout de configuración
         if (IsInConfigMode()) {
             timeout_count++;
             if (timeout_count >= CONFIG_TIMEOUT_TICKS) {
                 timeout_count = 0;
-                
-                clock_time_t current_time;
-                if (ClockGetTime(clock, &current_time)) {
-                    ModeChange(CLOCK_MODE_DISPLAY);
-                } else {
-                    ModeChange(CLOCK_MODE_UNSET_TIME);
-                }
+
+                // Enviar mensaje de timeout a MainTask
+                message.type = MSG_CONFIG_TIMEOUT;
+                message.data = 0;
+                xQueueSend(main_queue, &message, 0);
             }
         }
-        
+
         // Actualizar pantalla cada 100ms cuando estamos en modo DISPLAY
         if (clock_mode == CLOCK_MODE_DISPLAY && (count % 100) == 0) {
-            uint8_t value[4];
-            ClockGetTime(clock, &time);
-            ClockTimeToBCD(&time, value);
-            ScreenWriteBCD(board->screen, value, 4);
+            // Enviar mensaje para actualizar display
+            message.type = MSG_UPDATE_DISPLAY;
+            message.data = 0;
+            xQueueSend(display_queue, &message, 0);
         }
-        
-        // Esperar 1ms (para simular los 1000 ticks por segundo originales)
+
+        // Esperar 1ms
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
 }
 
 static void ButtonTask(void * pvParameters) {
     (void)pvParameters;
-    
+
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    
+    task_message_t message;
+
     while (true) {
-        // Detectar presiones largas y activar flags
+        // Detectar presiones largas
         if (IsLongPress(board->set_time, &set_time_press_duration, &set_time_long_pressed)) {
-            set_time_long_press_detected = true;
+            message.type = MSG_BUTTON_SET_TIME_LONG;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0); // Enviar sin esperar
+                                                 
         }
+
         if (IsLongPress(board->set_alarm, &set_alarm_press_duration, &set_alarm_long_pressed)) {
-            set_alarm_long_press_detected = true;
+            message.type = MSG_BUTTON_SET_ALARM_LONG;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0);
+            
         }
-        
-        // Verificar botones cada 1ms para detectar presiones rápidas
+
+        // Detectar presiones normales de botones
+        if (DigitalInputWasActivated(board->accept)) {
+            message.type = MSG_BUTTON_ACCEPT;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0);
+            
+        }
+
+        if (DigitalInputWasActivated(board->cancel)) {
+            message.type = MSG_BUTTON_CANCEL;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0);
+            
+        }
+
+        if (DigitalInputWasActivated(board->increase)) {
+            message.type = MSG_BUTTON_INCREASE;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0);
+            
+        }
+
+        if (DigitalInputWasActivated(board->decrease)) {
+            message.type = MSG_BUTTON_DECREASE;
+            message.data = 0;
+            xQueueSend(main_queue, &message, 0);
+            
+        }
+
+        // Verificar botones cada 10ms para buena responsividad
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1));
     }
 }
@@ -464,148 +549,154 @@ static void MainTask(void * pvParameters) {
     // Eliminar el parámetro no utilizado
     (void)pvParameters;
 
+    task_message_t message;
+    TickType_t timeout = pdMS_TO_TICKS(50); // Timeout de 50ms para recibir mensajes
+
     while (true) {
-        switch (clock_mode) {
-        case CLOCK_MODE_UNSET_TIME:
-            if (set_time_long_press_detected) {
-                set_time_long_press_detected = false;
-                ClockGetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_MINUTES);
-            } else if (set_alarm_long_press_detected) {
-                set_alarm_long_press_detected = false;
-                ClockGetAlarm(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
-            }
-            break;
-
-        case CLOCK_MODE_DISPLAY:
-            if (set_time_long_press_detected) {
-                set_time_long_press_detected = false;
-                ClockGetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_MINUTES);
-            } else if (set_alarm_long_press_detected) {
-                set_alarm_long_press_detected = false;
-                ClockGetAlarm(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
-            }
-
-            alarm_ringing = ClockCheckAlarm(clock);
-
-            if (alarm_ringing) {
-                if (DigitalInputWasActivated(board->accept)) {
-                    ClockPostponeAlarm(clock, 5);
-                    alarm_ringing = ClockCheckAlarm(clock);
+        // Recibir mensaje (esperar hasta 50ms)
+        if (xQueueReceive(main_queue, &message, timeout) == pdTRUE) {
+            // Procesar mensaje recibido
+            switch (message.type) {
+            case MSG_BUTTON_SET_TIME_LONG:
+                if (clock_mode == CLOCK_MODE_UNSET_TIME || clock_mode == CLOCK_MODE_DISPLAY) {
+                    ClockGetTime(clock, &time_to_display);
+                    ModeChange(CLOCK_MODE_SET_MINUTES);
                 }
-                if (DigitalInputWasActivated(board->cancel)) {
-                    ClockStopAlarm(clock);
-                    ClockEnableAlarm(clock, false);
-                    alarm_ringing = false;
+                break;
+
+            case MSG_BUTTON_SET_ALARM_LONG:
+                if (clock_mode == CLOCK_MODE_UNSET_TIME || clock_mode == CLOCK_MODE_DISPLAY) {
+                    ClockGetAlarm(clock, &time_to_display);
+                    ModeChange(CLOCK_MODE_SET_ALARM_MINUTES);
                 }
-            } else {
-                if (DigitalInputWasActivated(board->accept)) {
+                break;
+
+            case MSG_BUTTON_ACCEPT:
+                switch (clock_mode) {
+                case CLOCK_MODE_DISPLAY:
+                    if (alarm_ringing) {
+                        ClockPostponeAlarm(clock, 5);
+                        alarm_ringing = ClockCheckAlarm(clock);
+                    } else {
+                        ClockEnableAlarm(clock, true);
+                    }
+                    break;
+                case CLOCK_MODE_SET_HOURS:
+                    ResetConfigTimeout();
+                    ClockSetTime(clock, &time_to_display);
+                    ModeChange(CLOCK_MODE_DISPLAY);
+                    break;
+                case CLOCK_MODE_SET_MINUTES:
+                    ResetConfigTimeout();
+                    ClockSetTime(clock, &time_to_display);
+                    ModeChange(CLOCK_MODE_SET_HOURS);
+                    break;
+                case CLOCK_MODE_SET_ALARM_HOURS:
+                    ResetConfigTimeout();
+                    ClockSetAlarm(clock, &time_to_display);
+                    ModeChange(CLOCK_MODE_DISPLAY);
+                    break;
+                case CLOCK_MODE_SET_ALARM_MINUTES:
+                    ResetConfigTimeout();
+                    ClockSetAlarm(clock, &time_to_display);
                     ClockEnableAlarm(clock, true);
+                    ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
+                    break;
+                default:
+                    break;
                 }
-                if (DigitalInputWasActivated(board->cancel)) {
-                    ClockEnableAlarm(clock, false);
-                }
-            }
-            ClockUpdateAlarmVisual(clock, board, alarm_ringing);
-            break;
+                break;
 
-        case CLOCK_MODE_SET_HOURS:
-            if (DigitalInputWasActivated(board->increase)) {
-                ResetConfigTimeout();
-                IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->decrease)) {
-                ResetConfigTimeout();
-                DecreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->accept)) {
-                ResetConfigTimeout();
-                ClockSetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_DISPLAY);
-            } else if (DigitalInputWasActivated(board->cancel)) {
-                ResetConfigTimeout();
+            case MSG_BUTTON_CANCEL:
+                switch (clock_mode) {
+                case CLOCK_MODE_DISPLAY:
+                    if (alarm_ringing) {
+                        ClockStopAlarm(clock);
+                        ClockEnableAlarm(clock, false);
+                        alarm_ringing = false;
+                    } else {
+                        ClockEnableAlarm(clock, false);
+                    }
+                    break;
+                case CLOCK_MODE_SET_HOURS:
+                case CLOCK_MODE_SET_MINUTES:
+                    ResetConfigTimeout();
+                    {
+                        clock_time_t current_time;
+                        if (ClockGetTime(clock, &current_time)) {
+                            ModeChange(CLOCK_MODE_DISPLAY);
+                        } else {
+                            ModeChange(CLOCK_MODE_UNSET_TIME);
+                        }
+                    }
+                    break;
+                case CLOCK_MODE_SET_ALARM_HOURS:
+                case CLOCK_MODE_SET_ALARM_MINUTES:
+                    ResetConfigTimeout();
+                    ModeChange(CLOCK_MODE_DISPLAY);
+                    break;
+                default:
+                    break;
+                }
+                break;
+
+            case MSG_BUTTON_INCREASE:
+                switch (clock_mode) {
+                case CLOCK_MODE_SET_HOURS:
+                case CLOCK_MODE_SET_ALARM_HOURS:
+                    ResetConfigTimeout();
+                    IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
+                    UpdateDisplayContent();
+                    break;
+                case CLOCK_MODE_SET_MINUTES:
+                case CLOCK_MODE_SET_ALARM_MINUTES:
+                    ResetConfigTimeout();
+                    IncreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
+                    UpdateDisplayContent();
+                    break;
+                default:
+                    break;
+                }
+                break;
+
+            case MSG_BUTTON_DECREASE:
+                switch (clock_mode) {
+                case CLOCK_MODE_SET_HOURS:
+                case CLOCK_MODE_SET_ALARM_HOURS:
+                    ResetConfigTimeout();
+                    DecreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
+                    UpdateDisplayContent();
+                    break;
+                case CLOCK_MODE_SET_MINUTES:
+                case CLOCK_MODE_SET_ALARM_MINUTES:
+                    ResetConfigTimeout();
+                    DecreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
+                    UpdateDisplayContent();
+                    break;
+                default:
+                    break;
+                }
+                break;
+
+            case MSG_CONFIG_TIMEOUT: {
                 clock_time_t current_time;
                 if (ClockGetTime(clock, &current_time)) {
                     ModeChange(CLOCK_MODE_DISPLAY);
                 } else {
                     ModeChange(CLOCK_MODE_UNSET_TIME);
                 }
-            }
-            break;
+            } break;
 
-        case CLOCK_MODE_SET_MINUTES:
-            if (DigitalInputWasActivated(board->increase)) {
-                ResetConfigTimeout();
-                IncreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->decrease)) {
-                ResetConfigTimeout();
-                DecreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->accept)) {
-                ResetConfigTimeout();
-                ClockSetTime(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_SET_HOURS);
-            } else if (DigitalInputWasActivated(board->cancel)) {
-                ResetConfigTimeout();
-                clock_time_t current_time;
-                if (ClockGetTime(clock, &current_time)) {
-                    ModeChange(CLOCK_MODE_DISPLAY);
-                } else {
-                    ModeChange(CLOCK_MODE_UNSET_TIME);
-                }
+            default:
+                // Mensaje no reconocido
+                break;
             }
-            break;
-
-        case CLOCK_MODE_SET_ALARM_HOURS:
-            if (DigitalInputWasActivated(board->increase)) {
-                ResetConfigTimeout();
-                IncreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->decrease)) {
-                ResetConfigTimeout();
-                DecreaseBCD(time_to_display.time.hours, HOURS_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->accept)) {
-                ResetConfigTimeout();
-                ClockSetAlarm(clock, &time_to_display);
-                ModeChange(CLOCK_MODE_DISPLAY);
-            } else if (DigitalInputWasActivated(board->cancel)) {
-                ResetConfigTimeout();
-                ModeChange(CLOCK_MODE_DISPLAY);
-            }
-            break;
-
-        case CLOCK_MODE_SET_ALARM_MINUTES:
-            if (DigitalInputWasActivated(board->increase)) {
-                ResetConfigTimeout();
-                IncreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->decrease)) {
-                ResetConfigTimeout();
-                DecreaseBCD(time_to_display.time.minutes, MINUTES_LIMIT);
-                UpdateDisplayContent();
-            } else if (DigitalInputWasActivated(board->accept)) {
-                ResetConfigTimeout();
-                ClockSetAlarm(clock, &time_to_display);
-                ClockEnableAlarm(clock, true);
-                ModeChange(CLOCK_MODE_SET_ALARM_HOURS);
-            } else if (DigitalInputWasActivated(board->cancel)) {
-                ResetConfigTimeout();
-                ModeChange(CLOCK_MODE_DISPLAY);
-            }
-            break;
-
-        default:
-            break;
         }
 
-        // Mantener el delay por ahora
-        for (int delay = 0; delay < 25000; delay++) {
-            __asm("NOP");
+        // Si estamos en modo DISPLAY, manejar alarma
+        if (clock_mode == CLOCK_MODE_DISPLAY) {
+            alarm_ringing = ClockCheckAlarm(clock);
+            ClockUpdateAlarmVisual(clock, board, alarm_ringing);
         }
     }
 
