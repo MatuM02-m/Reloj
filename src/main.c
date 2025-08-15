@@ -365,7 +365,7 @@ bool IsInConfigMode(void) {
 /* === Public function implementation ========================================================= */
 
 /**
- * @brief Función pricipal del programa.
+ * @brief Función pricipal del programa con FreeRTOS.
  *
  * @return int
  */
